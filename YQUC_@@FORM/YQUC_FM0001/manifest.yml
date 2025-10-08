@@ -1,7 +1,7 @@
 ---
 applications:
   - name: YQUC_FM0001
-    memory: 128MB
+    memory: 512MB
     disk_quota: 512M
     host: YQUC_FM0001
     domain: cf.ap21.hana.ondemand.com
