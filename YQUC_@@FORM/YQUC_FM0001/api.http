@@ -1,0 +1,29 @@
+
+@esm = https://my1001359.de1.test.crm.cloud.sap
+@user = U_QUB0008
+@password = U_QUB0008windows10#456
+
+
+
+
+
+
+
+###
+# @name login
+GET {{esm}}/sap/c4c/api/v1/iam-service/token
+Content-Type: application/json
+Authorization: Basic {{user}}:{{password}} 
+
+
+@access_token = {{login.response.body.value.access_token}}
+
+
+
+###
+POST https://YQUC_FM0001.cfapps.ap21.hana.ondemand.com/costcenter?companyID=C280
+
+
+
+
+

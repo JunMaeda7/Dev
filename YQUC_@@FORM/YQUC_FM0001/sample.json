@@ -1,0 +1,42 @@
+{
+  "entity": "sap.ssc.caseservice.entity.case",
+  "currentImage": {
+    "subject": "testcostcenter",
+    "priority": "03",
+    "priorityDescription": "標準",
+    "origin": "SELF_SERVICE",
+    "originDescription": "セルフサービス",
+    "caseType": "ZZXA",
+    "caseTypeDescription": "POC用支払依頼３",
+    "status": "01",
+    "timePoints": {
+      "reportedOn": "2025-10-07T13:56:48.798Z"
+    },
+    "categoryLevel2": {},
+    "categoryLevel3": {},
+    "categoryLevel4": {},
+    "company": {
+      "id": "11f013ac-30ef-5d9e-afdb-81359f020a00",
+      "displayId": "C280",
+      "name": "Company Code C280"
+    },
+    "isDraftMode": false,
+    "adminData": {
+      "createdOn": "2025-10-07T13:59:23.317970885Z",
+      "createdBy": "e4184804-0ed3-11f0-85df-e51c1811ea12",
+      "createdByName": "Weiying Fan",
+      "updatedOn": "2025-10-07T13:59:23.317970885Z",
+      "updatedBy": "e4184804-0ed3-11f0-85df-e51c1811ea12",
+      "updatedByName": "Weiying Fan"
+    }
+  },
+  "beforeImage": {},
+  "skipValidations": true,
+  "context": {
+    "employeeId": "11f00ed3-ac7a-c81e-afdb-81a74e020a00",
+    "userId": "e4184804-0ed3-11f0-85df-e51c1811ea12",
+    "skipValidations": true,
+    "isDryRun": true,
+    "language": "ja"
+  }
+}
