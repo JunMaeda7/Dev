@@ -1,0 +1,159 @@
+casetypes = [
+    {
+        "caseType": "Z001",
+        "description": "Payment Request - Conference Fees (S353)",
+        "companyID": "35300000",
+        "companyUUID": "11f01152-8c26-139e-afdb-813e42020a00",
+        "internalOrder": "35305000",
+        "internalOrderUUID": "11f01152-8c25-9e6e-afdb-813e42020a00"
+    }
+
+
+
+{
+  "entity": "sap.ssc.caseservice.entity.case",
+  "currentImage": {
+    "subject": "aaa",
+    "priority": "03",
+    "priorityDescription": "Normal",
+    "origin": "SELF_SERVICE",
+    "originDescription": "Self-service",
+    "caseType": "ZZXB",
+    "status": "01",
+    "timePoints": {
+      "reportedOn": "2025-10-10T05:54:11.094Z"
+    },
+    "categoryLevel1": {},
+    "categoryLevel2": {},
+    "categoryLevel3": {},
+    "categoryLevel4": {},
+    "company": {
+      "id": "11f013ac-b220-554e-afdb-81359f020a00",
+      "displayId": "S030",
+      "name": "Company Code S030"
+    },
+    "isDraftMode": false,
+    "adminData": {
+      "createdOn": "2025-10-10T05:56:04.145703920Z",
+      "createdBy": "08806d61-3b97-11f0-9f4c-6bd0a8aedffe",
+      "createdByName": "Baigei On",
+      "updatedOn": "2025-10-10T05:56:04.145703920Z",
+      "updatedBy": "08806d61-3b97-11f0-9f4c-6bd0a8aedffe",
+      "updatedByName": "Baigei On"
+    }
+  },
+  "beforeImage": {},
+  "skipValidations": true,
+  "context": {
+    "employeeId": "019715d4-87dd-7ddb-b7ca-403fe5ca4c7e",
+    "userId": "08806d61-3b97-11f0-9f4c-6bd0a8aedffe",
+    "skipValidations": true,
+    "isDryRun": true,
+    "language": "en"
+  }
+}
+
+
+
+
+
+
+
+
+
+{
+  "entity": "sap.ssc.caseservice.entity.case",
+  "currentImage": {
+    "subject": "aaa",
+    "priority": "03",
+    "priorityDescription": "Normal",
+    "origin": "SELF_SERVICE",
+    "originDescription": "Self-service",
+    "caseType": "Z005",
+    "caseTypeDescription": "Payment Request 280",
+    "status": "01",
+    "timePoints": {
+      "reportedOn": "2025-10-10T05:48:49.284Z"
+    },
+    "categoryLevel1": {},
+    "categoryLevel2": {},
+    "categoryLevel3": {},
+    "categoryLevel4": {},
+    "company": {
+      "id": "11f013ac-30ef-5d9e-afdb-81359f020a00",
+      "displayId": "C280",
+      "name": "Company Code C280"
+    },
+    "isDraftMode": false,
+    "adminData": {
+      "createdOn": "2025-10-10T05:49:42.643712382Z",
+      "createdBy": "08806d61-3b97-11f0-9f4c-6bd0a8aedffe",
+      "createdByName": "Baigei On",
+      "updatedOn": "2025-10-10T05:49:42.643712382Z",
+      "updatedBy": "08806d61-3b97-11f0-9f4c-6bd0a8aedffe",
+      "updatedByName": "Baigei On"
+    }
+  },
+  "beforeImage": {},
+  "skipValidations": true,
+  "context": {
+    "employeeId": "019715d4-87dd-7ddb-b7ca-403fe5ca4c7e",
+    "userId": "08806d61-3b97-11f0-9f4c-6bd0a8aedffe",
+    "skipValidations": true,
+    "isDryRun": true,
+    "language": "en"
+  }
+}
+
+
+
+
+
+{
+  "entity": "sap.ssc.caseservice.entity.case",
+  "currentImage": {
+    "subject": "TEST 20251010",
+    "priority": "03",
+    "priorityDescription": "Normal",
+    "origin": "SELF_SERVICE",
+    "originDescription": "Self-service",
+    "caseType": "ZZX3",
+    "status": "01",
+    "timePoints": {
+      "reportedOn": "2025-10-10T06:09:21.046Z"
+    },
+    "categoryLevel2": {},
+    "categoryLevel3": {},
+    "categoryLevel4": {},
+    "company": {
+      "id": "11f013ac-30ef-5d9e-afdb-81359f020a00",
+      "displayId": "C280",
+      "name": "Company Code C280"
+    },
+    "isDraftMode": false,
+    "extensions": {
+      "AccountCode": null,
+      "TaxCode": null,
+      "PaymentDate": null,
+      "Postingdate": null,
+      "CompanyCode": "C280"
+    },
+    "adminData": {
+      "createdOn": "2025-10-10T06:09:53.398418400Z",
+      "createdBy": "e4184804-0ed3-11f0-85df-e51c1811ea12",
+      "createdByName": "Weiying Fan",
+      "updatedOn": "2025-10-10T06:09:53.398418400Z",
+      "updatedBy": "e4184804-0ed3-11f0-85df-e51c1811ea12",
+      "updatedByName": "Weiying Fan"
+    }
+  },
+  "beforeImage": {},
+  "skipValidations": false,
+  "context": {
+    "employeeId": "11f00ed3-ac7a-c81e-afdb-81a74e020a00",
+    "userId": "e4184804-0ed3-11f0-85df-e51c1811ea12",
+    "skipValidations": false,
+    "isDryRun": false,
+    "language": "en"
+  }
+}

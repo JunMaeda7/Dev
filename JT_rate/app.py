@@ -27,9 +27,9 @@ app = FastAPI(
     version="0.0.1",
     terms_of_service="http://example.com/terms/",
     contact={
-        "name": "On Baigei",
+        "name": "Yogananda Muthaiah",
         "url": "http://www.sap.com",
-        "email": "baigei.on@jt.com",
+        "email": "yogananda.muthaiah@sap.com",
     },
     license_info={
         "name": "Apache 2.0",
@@ -48,20 +48,15 @@ password = "GTfgNi5eMe4V3mM"
  
 casetypes = [
     {
-        "caseType": "ZA01",
-        "description": "支払依頼(C280)",
-        "company": {
-                    "id": "11f013ac-30ef-5d9e-afdb-81359f020a00",
-                    "displayId": "C280",
-                    "name": "Company Code C280"
-                    }
+        "caseType": "Z001",
+        "description": "Payment Request - Conference Fees (S353)",
         "companyID": "35300000",
         "companyUUID": "11f01152-8c26-139e-afdb-813e42020a00",
         "internalOrder": "35305000",
         "internalOrderUUID": "11f01152-8c25-9e6e-afdb-813e42020a00"
     },
     {
-        "caseType": "ZA02",
+        "caseType": "Z002",
         "description": "Payment Request - Conference Fees (C280)",
         "companyID": "28020620",
         "companyUUID": "",
@@ -69,7 +64,7 @@ casetypes = [
         "internalOrderUUID": "11f01152-8c25-9e6e-afdb-813e42020a00"
     },
     {
-        "caseType": "ZA03",
+        "caseType": "Z003",
         "description": "Payment Request - Membership Fees (S353)",
         "companyID": "35300000",
         "companyUUID": "",
@@ -77,7 +72,7 @@ casetypes = [
         "internalOrderUUID": "11f01152-8c25-9e6e-afdb-813e42020a00"
     },
     {
-        "caseType": "ZA04",
+        "caseType": "Z004",
         "description": "Payment Request - Gifts (S353)",
         "companyID": "35304000",
         "companyUUID": "",
@@ -875,7 +870,7 @@ async def forms_integration(request: Request):
           amount_yen = item.get("Amount_yen", 0)
           tax_amount = item.get("Taxamout", 0)
           try:
-            item_total = (float(amount_yen) + float(tax_amount)) * float(currency)
+            item_total = (float(amount_yen) + float(tax_amount))
             print(f"Item Amount: {amount_yen}, Tax: {tax_amount}, Currency: {currency}, Item Total: {item_total}")
             total_amount += item_total
             print(f"Running Total Amount: {total_amount}")
