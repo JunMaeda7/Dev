@@ -1,0 +1,971 @@
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import JSONResponse
+import requests
+import uvicorn
+import os
+import httpx
+import asyncio
+from fastapi import FastAPI, Query
+from typing import List, Optional
+from pydantic import BaseModel
+import base64
+ 
+ 
+ 
+description = """
+SAP Sales & Service Cloud V2 Extensions 🚀
+ 
+## Webhook Notifications
+Contact - yogananda.muthaiah@sap.com for any issues or questions or developements further
+This API allows you to send webhook notifications to Microsoft Teams using Adaptive Cards.
+"""
+ 
+app = FastAPI(
+    title="JT Requirements for Side-By-Side Extensions",
+    description=description,
+    summary="This is PoC Request from Marcel and Annette.",
+    version="0.0.1",
+    terms_of_service="http://example.com/terms/",
+    contact={
+        "name": "Yogananda Muthaiah",
+        "url": "http://www.sap.com",
+        "email": "yogananda.muthaiah@sap.com",
+    },
+    license_info={
+        "name": "Apache 2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
+    },
+)
+cf_port = int(os.getenv("PORT", 3000))
+ 
+print("Start....")
+ 
+host = "https://my1001359.de1.test.crm.cloud.sap/sap/c4c/api/v1"
+tokenurl = "/iam-service/token"
+currencyconver = "/i18n-service/exchangeRates/"
+user = "U_QUB0011"
+password = "GTfgNi5eMe4V3mM"
+ 
+casetypes = [
+    {
+        "caseType": "Z001",
+        "description": "Payment Request - Conference Fees (S353)",
+        "companyID": "35300000",
+        "companyUUID": "11f01152-8c26-139e-afdb-813e42020a00",
+        "internalOrder": "35305000",
+        "internalOrderUUID": "11f01152-8c25-9e6e-afdb-813e42020a00"
+    },
+    {
+        "caseType": "Z002",
+        "description": "Payment Request - Conference Fees (C280)",
+        "companyID": "28020620",
+        "companyUUID": "",
+        "internalOrder": "35305000",
+        "internalOrderUUID": "11f01152-8c25-9e6e-afdb-813e42020a00"
+    },
+    {
+        "caseType": "Z003",
+        "description": "Payment Request - Membership Fees (S353)",
+        "companyID": "35300000",
+        "companyUUID": "",
+        "internalOrder": "35305000",
+        "internalOrderUUID": "11f01152-8c25-9e6e-afdb-813e42020a00"
+    },
+    {
+        "caseType": "Z004",
+        "description": "Payment Request - Gifts (S353)",
+        "companyID": "35304000",
+        "companyUUID": "",
+        "internalOrder": "35305000",
+        "internalOrderUUID": "11f01152-8c25-9e6e-afdb-813e42020a00"
+    },
+    {
+        "caseType": "Z005",
+        "description": "Payment Request 280",
+        "companyID": "C280",
+        "companyUUID": "11f013ac-30ef-5d9e-afdb-81359f020a00",
+        "internalOrder": "35305000",
+        "internalOrderUUID": "11f01152-8c25-9e6e-afdb-813e42020a00"
+    },
+    {
+        "caseType": "Z006",
+        "description": "Payment Request 353",
+        "companyID": "S353",
+        "companyUUID": "11f013ac-8ef2-4a6e-afdb-815d1b020a00",
+        "internalOrder": "35305000",
+        "internalOrderUUID": "11f01152-8c25-9e6e-afdb-813e42020a00"
+    }        
+]
+ 
+ 
+Level1 = [
+  {
+    "Level": "L1",
+    "CaseType": "Z005",
+    "CategoryDisplayID": "Z001",
+    "DisplayName": "Level 1",
+    "UUID": "Z00001"
+  },
+  {
+    "Level": "L1",
+    "CaseType": "Z006",
+    "CategoryDisplayID": "Z002",
+    "DisplayName": "Food and beverage for including outside parties",
+    "UUID": "Z00002"
+  },
+  {
+    "Level": "L1",
+    "CaseType": "Z006",
+    "CategoryDisplayID": "Z002",
+    "DisplayName": "Food and beverage for employees only",
+    "UUID": "Z00003"
+  },
+  {
+    "Level": "L1",
+    "CaseType": "Z006",
+    "CategoryDisplayID": "Z003",
+    "DisplayName": "Membership fees for various associations, organizations",
+    "UUID": "Z00004"
+  },
+  {
+    "Level": "L1",
+    "CaseType": "Z006",
+    "CategoryDisplayID": "Z003",
+    "DisplayName": "Admission fees for various associations, organizations",
+    "UUID": "Z00005"
+  },
+  {
+    "Level": "L1",
+    "CaseType": "Z006",
+    "CategoryDisplayID": "Z004",
+    "DisplayName": "Gifts to outside parties",
+    "UUID": "Z00006"
+  }
+]
+ 
+Level2 = [
+  {
+    "Level": "L2",
+    "L1_DisplayName": "Level 1",
+    "CategoryDisplayID": "Z00001",
+    "DisplayName": "Level2-1",
+    "UUID": "L2_Z00001"
+  },
+  {
+    "Level": "L2",
+    "L1_DisplayName": "Level 1",
+    "CategoryDisplayID": "Z00001",
+    "DisplayName": "Level2-2",
+    "UUID": "L2_Z00002"
+  },
+  {
+    "Level": "L2",
+    "L1_DisplayName": "Level 1",
+    "CategoryDisplayID": "Z00001",
+    "DisplayName": "Level2-3",
+    "UUID": "L2_Z00003"
+  },
+  {
+    "Level": "L2",
+    "L1_DisplayName": "Level 1",
+    "CategoryDisplayID": "Z00001",
+    "DisplayName": "Level2-4",
+    "UUID": "L2_Z00004"
+  },
+  {
+    "Level": "L2",
+    "L1_DisplayName": "Food and beverage for including outside parties",
+    "CategoryDisplayID": "Z00002",
+    "DisplayName": "domestic vendors:Less than 10,000 yen per unit excluding tax",
+    "UUID": "L2_Z00005"
+  },
+  {
+    "Level": "L2",
+    "L1_DisplayName": "Food and beverage for including outside parties",
+    "CategoryDisplayID": "Z00002",
+    "DisplayName": "domestic vendors:Over 10,000 yen per unit excluding tax",
+    "UUID": "L2_Z00006"
+  },
+  {
+    "Level": "L2",
+    "L1_DisplayName": "Food and beverage for including outside parties",
+    "CategoryDisplayID": "Z00002",
+    "DisplayName": "On overseas business trip:Less than 10,000 yen per unit",
+    "UUID": "L2_Z00007"
+  },
+  {
+    "Level": "L2",
+    "L1_DisplayName": "Food and beverage for including outside parties",
+    "CategoryDisplayID": "Z00002",
+    "DisplayName": "On overseas business trip:Over 10,000 yen",
+    "UUID": "L2_Z00008"
+  },
+  {
+    "Level": "L2",
+    "L1_DisplayName": "Food and beverage for employees only",
+    "CategoryDisplayID": "Z00003",
+    "DisplayName": "food and beverage expenses associated with meetings and conferences",
+    "UUID": "L2_Z00009"
+  },
+  {
+    "Level": "L2",
+    "L1_DisplayName": "Food and beverage for employees only",
+    "CategoryDisplayID": "Z00003",
+    "DisplayName": "Food and beverage entertainment not involving meetings or conferences",
+    "UUID": "L2_Z00010"
+  },
+  {
+    "Level": "L2",
+    "L1_DisplayName": "Membership fees for various associations, organizations",
+    "CategoryDisplayID": "Z00004",
+    "DisplayName": "Organizations located in Japan",
+    "UUID": "L2_Z00011"
+  },
+  {
+    "Level": "L2",
+    "L1_DisplayName": "Membership fees for various associations, organizations",
+    "CategoryDisplayID": "Z00004",
+    "DisplayName": "Overseas organizations",
+    "UUID": "L2_Z00012"
+  },
+  {
+    "Level": "L2",
+    "L1_DisplayName": "Admission fees for various associations, organizations",
+    "CategoryDisplayID": "Z00005",
+    "DisplayName": "Organizations located in Japan",
+    "UUID": "L2_Z00013"
+  },
+  {
+    "Level": "L2",
+    "L1_DisplayName": "Admission fees for various associations, organizations",
+    "CategoryDisplayID": "Z00005",
+    "DisplayName": "Overseas organizations",
+    "UUID": "L2_Z00014"
+  },
+  {
+    "Level": "L2",
+    "L1_DisplayName": "Admission fees for various associations, organizations",
+    "CategoryDisplayID": "Z00005",
+    "DisplayName": "Membership fees for domestic municipalities",
+    "UUID": "L2_Z00015"
+  },
+  {
+    "Level": "L2",
+    "L1_DisplayName": "Gifts to outside parties",
+    "CategoryDisplayID": "Z00006",
+    "DisplayName": "Souvenirs for overseas business trips",
+    "UUID": "L2_Z00016"
+  },
+  {
+    "Level": "L2",
+    "L1_DisplayName": "Gifts to outside parties",
+    "CategoryDisplayID": "Z00006",
+    "DisplayName": "Provision of gift certificates, beer coupons",
+    "UUID": "L2_Z00017"
+  },
+  {
+    "Level": "L2",
+    "L1_DisplayName": "Gifts to outside parties",
+    "CategoryDisplayID": "Z00006",
+    "DisplayName": "Other",
+    "UUID": "L2_Z00018"
+  }
+]
+ 
+ 
+Level3 = [
+  {
+    "Level": "L3",
+    "CaseType": "",
+    "CategoryDisplayID": "L2_Z00001",
+    "DisplayName": "Tax10%",
+    "UUID": "L3_Z00001"
+  },
+  {
+    "Level": "L3",
+    "CaseType": "",
+    "CategoryDisplayID": "L2_Z00001",
+    "DisplayName": "Tax8%",
+    "UUID": "L3_Z00002"
+  },
+  {
+    "Level": "L3",
+    "CaseType": "",
+    "CategoryDisplayID": "L2_Z00002",
+    "DisplayName": "Tax10%",
+    "UUID": "L3_Z00003"
+  },
+  {
+    "Level": "L3",
+    "CaseType": "",
+    "CategoryDisplayID": "L2_Z00002",
+    "DisplayName": "Tax8%",
+    "UUID": "L3_Z00004"
+  },
+  {
+    "Level": "L3",
+    "CaseType": "",
+    "CategoryDisplayID": "L2_Z00005",
+    "DisplayName": "Tax 10%",
+    "UUID": "L3_Z00005"
+  },
+  {
+    "Level": "L3",
+    "CaseType": "",
+    "CategoryDisplayID": "L2_Z00005",
+    "DisplayName": "Tax 8%",
+    "UUID": "L3_Z00006"
+  },
+  {
+    "Level": "L3",
+    "CaseType": "",
+    "CategoryDisplayID": "L2_Z00006",
+    "DisplayName": "Tax 10%",
+    "UUID": "L3_Z00007"
+  },
+  {
+    "Level": "L3",
+    "CaseType": "",
+    "CategoryDisplayID": "L2_Z00006",
+    "DisplayName": "Tax 8%",
+    "UUID": "L3_Z00008"
+  },
+  {
+    "Level": "L3",
+    "CaseType": "",
+    "CategoryDisplayID": "L2_Z00009",
+    "DisplayName": "Eating and drinking in the same facility as the meeting location",
+    "UUID": "L3_Z00009"
+  },
+  {
+    "Level": "L3",
+    "CaseType": "",
+    "CategoryDisplayID": "L2_Z00009",
+    "DisplayName": "Eating and drinking at different locations",
+    "UUID": "L3_Z00010"
+  },
+  {
+    "Level": "L3",
+    "CaseType": "",
+    "CategoryDisplayID": "L2_Z00010",
+    "DisplayName": "domestic vendors",
+    "UUID": "L3_Z00011"
+  },
+  {
+    "Level": "L3",
+    "CaseType": "",
+    "CategoryDisplayID": "L2_Z00010",
+    "DisplayName": "On overseas business trip",
+    "UUID": "L3_Z00012"
+  },
+  {
+    "Level": "L3",
+    "CaseType": "",
+    "CategoryDisplayID": "L2_Z00011",
+    "DisplayName": "Associations for the purpose of friendship among members",
+    "UUID": "L3_Z00013"
+  },
+  {
+    "Level": "L3",
+    "CaseType": "",
+    "CategoryDisplayID": "L2_Z00011",
+    "DisplayName": "Other",
+    "UUID": "L3_Z00014"
+  },
+  {
+    "Level": "L3",
+    "CaseType": "",
+    "CategoryDisplayID": "L2_Z00012",
+    "DisplayName": "Associations for the purpose of friendship among members",
+    "UUID": "L3_Z00015"
+  },
+  {
+    "Level": "L3",
+    "CaseType": "",
+    "CategoryDisplayID": "L2_Z00012",
+    "DisplayName": "Other",
+    "UUID": "L3_Z00016"
+  },
+  {
+    "Level": "L3",
+    "CaseType": "",
+    "CategoryDisplayID": "L2_Z00013",
+    "DisplayName": "Associations for the purpose of friendship among members",
+    "UUID": "L3_Z00017"
+  },
+  {
+    "Level": "L3",
+    "CaseType": "",
+    "CategoryDisplayID": "L2_Z00013",
+    "DisplayName": "Other",
+    "UUID": "L3_Z00018"
+  },
+  {
+    "Level": "L3",
+    "CaseType": "",
+    "CategoryDisplayID": "L2_Z00014",
+    "DisplayName": "Associations for the purpose of friendship among members",
+    "UUID": "L3_Z00019"
+  },
+  {
+    "Level": "L3",
+    "CaseType": "",
+    "CategoryDisplayID": "L2_Z00014",
+    "DisplayName": "Other",
+    "UUID": "L3_Z00020"
+  },
+  {
+    "Level": "L3",
+    "CaseType": "",
+    "CategoryDisplayID": "L2_Z00015",
+    "DisplayName": "Sales tax is noted on the invoice.",
+    "UUID": "L3_Z00021"
+  },
+  {
+    "Level": "L3",
+    "CaseType": "",
+    "CategoryDisplayID": "L2_Z00015",
+    "DisplayName": "Dues for dues-paying social gatherings",
+    "UUID": "L3_Z00022"
+  },
+  {
+    "Level": "L3",
+    "CaseType": "",
+    "CategoryDisplayID": "L2_Z00015",
+    "DisplayName": "No sales tax noted on invoice",
+    "UUID": "L3_Z00023"
+  }
+]
+ 
+ 
+ 
+# Generate an authentication token
+async def get_authentication_token():
+    """
+    Fetches an authentication token from the SAP Sales Cloud API.
+ 
+    Returns:
+        str: The authentication token.
+    """
+    auth_url = f"{host}/iam-service/token"
+    headers = {
+        "Content-Type": "application/json"
+    }
+ 
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(auth_url, headers=headers, auth=httpx.BasicAuth(user, password))
+            response.raise_for_status()
+            token_data = response.json()
+            return token_data.get("value", {}).get("access_token")
+    except httpx.HTTPError as e:
+        print(f"Error fetching authentication token: {e}")
+        return None
+ 
+# Fetch the token and store it for use in API calls
+auth_token = asyncio.run(get_authentication_token())
+if auth_token:
+    print("Authentication token fetched successfully.")
+else:
+    print("Failed to fetch authentication token.")
+ 
+ 
+@app.get('/health')
+async def health():
+    return JSONResponse(content={"status": "running"}, status_code=200)
+ 
+@app.post('/prehookcase')
+async def prehook(request: Request):
+    data = await request.json()
+    before_image = data.get('beforeImage', {})
+    current_data = data.get('currentImage', {})
+    context = data.get('context', {})
+ 
+    #current_data['employee'] = current_data.get('employee', {})
+    # Extract company ID from current data
+    #company_id = current_data.get('company', {}).get('id')
+    case_type = current_data.get('caseType')
+    case_employee_id = context.get('employeeId')
+    print("caseType ID:", case_type, "Case Employee ID:", case_employee_id)
+ 
+    # Filter caseTypes based on the caseType in currentImage
+    matching_case = next((case for case in casetypes if case['caseType'] == case_type), None)
+    if matching_case:
+        current_data["company"] = {
+            "id": matching_case.get("companyUUID", ""),
+            "displayId": matching_case.get("companyID", "")
+        }
+ 
+ 
+    print("Matching Case:", matching_case)
+ 
+ 
+    if not case_type or not case_employee_id:
+        response_body = {
+            'data': current_data
+        }
+        return JSONResponse(content=response_body, status_code=200)
+    
+    if matching_case:
+        current_data['company'] = {
+            "id": matching_case.get("companyUUID", ""),
+            "displayId": matching_case.get("companyID", "")
+        }
+        print("Updated company structure:", current_data['company'])
+    response_body = {
+        'data': current_data
+    }
+ 
+ 
+    return JSONResponse(content=response_body, status_code=200)
+ 
+ 
+@app.post('/formprehookcase')
+async def prehook(request: Request):
+    data = await request.json()
+    print(data)
+    before_image = data.get('beforeImage', {})
+    current_data = data.get('currentImage', {})
+    context = data.get('context', {})
+    #print("Current Data:", context)
+    exchange_rate = 1.6
+    current_data['NUMERIC-1'] = exchange_rate
+    current_data['DATE_PICKER-2'] = "2025-08-19"
+ 
+ 
+    response_body = {
+            'data': current_data
+        }
+    return JSONResponse(content=response_body, status_code=200)
+ 
+ 
+# Sample data with ControllingArea field added
+cost_centers = [
+    {"CostCenterName": "Finance Planning", "CostCenterCode": "10000101", "ControllingArea": "CA01"},
+    {"CostCenterName": "HR", "CostCenterCode": "10000102", "ControllingArea": "CA02"},
+    {"CostCenterName": "IT", "CostCenterCode": "10000103", "ControllingArea": "CA01"},
+    {"CostCenterName": "Finance 1", "CostCenterCode": "10000104", "ControllingArea": "CA01"},
+    {"CostCenterName": "Sales", "CostCenterCode": "10000105", "ControllingArea": "CA03"},
+    {"CostCenterName": "Finance 2", "CostCenterCode": "10000106", "ControllingArea": "CA02"},
+]
+ 
+# Response model updated with ControllingArea
+class CostCenter(BaseModel):
+    CostCenterName: str
+    CostCenterCode: str
+    ControllingArea: str
+ 
+@app.get("/costcenters", response_model=List[CostCenter])
+async def get_cost_centers(CostCenterName: Optional[str] = Query(None)) -> List[CostCenter]:
+    print(f"GET /costcenters called with CostCenterName={CostCenterName}")
+    if CostCenterName:
+        # Filter by CostCenterName (case-insensitive)
+        filtered = [
+            cc for cc in cost_centers
+            if CostCenterName.lower() in cc["CostCenterName"].lower()
+        ]
+        print(f"Filtered result: {filtered}")
+        return filtered
+    print(f"Returning all cost centers: {cost_centers}")
+    return cost_centers
+ 
+ 
+@app.post("/formsintegration")
+async def forms_integration(request: Request):
+    try:
+        json_body = await request.json()
+        print("Received payload:", json_body)
+ 
+        # Extract fields from payload
+        form_data = json_body.get("requestBody", {}).get("Form", {})
+        # Extract CostCenterSearch from the first item in ItemTable
+        item_table = form_data.get("ItemTable", [])
+        text_field_1 = None
+        if item_table and isinstance(item_table, list):
+            text_field_1 = item_table[0].get("CostCenterSearch")
+ 
+        print("Text Field 1:", text_field_1)
+ 
+        if not text_field_1:
+            raise HTTPException(status_code=400, detail="Missing TEXT_FIELD-1")
+ 
+        # Construct the GET request URL (replace with actual URL in production)
+        url = f"https://jtfinal.cfapps.eu10.hana.ondemand.com/costcenters?CostCenterName={text_field_1}"
+ 
+ 
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url)
+ 
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail="External API error")
+ 
+        result_json = response.json()
+ 
+        # Parse the response to extract CostCenterNames
+        cost_centers = []
+        if isinstance(result_json, dict):
+            # For FastAPI responses, this should be a list of dicts
+            if 'value' in result_json and isinstance(result_json['value'], list):
+                for item in result_json['value']:
+                    if "CostCenterName" in item:
+                        cost_centers.append(item["CostCenterName"])
+            elif "CostCenterName" in result_json:
+                cost_centers.append(result_json["CostCenterName"])
+        elif isinstance(result_json, list):
+            for item in result_json:
+                if "CostCenterName" in item:
+                    cost_centers.append(item["CostCenterName"])
+ 
+        if not cost_centers:
+            raise HTTPException(status_code=404, detail="No CostCenterName found")
+ 
+        # Build the response structure
+        response_body = {
+            "responseBody": {
+            "messages": [
+                {
+                "code": "S000",
+                "message": "Success",
+                "type": "INFO"
+                }
+            ],
+            "value": {
+                "codes": [
+                {
+                    "description": item["CostCenterName"],
+                    "key": item["CostCenterCode"]
+                } for item in result_json if "CostCenterCode" in item
+                ]
+            },
+            "isSuccess": True
+            }
+        }
+ 
+        return JSONResponse(content=response_body)
+ 
+    except HTTPException as http_ex:
+        raise http_ex
+    except Exception as ex:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(ex)}")
+ 
+@app.post("/formsintegrationLone")
+async def forms_integration(request: Request):
+    try:
+        json_body = await request.json()
+        print("Received payload 2:", json_body)
+ 
+        ## {'requestBody': {'case': {'categoryLevel1': {'displayId': 'Z001'}, 'caseType': 'Z005'}}}
+ 
+        # Extract fields from payload
+        form_data = json_body.get("requestBody", {}).get("case", {})
+        print("Form Data:", form_data)
+        category_level_1 = form_data.get("categoryLevel1", {}).get("displayId")
+        print("CategoryLevel1:", category_level_1)
+        # Extract CostCenterSearch from the first item in ItemTable
+        caseType = form_data.get("caseType")
+        print("caseType:", caseType)
+ 
+        if not category_level_1 or not caseType:
+            raise HTTPException(status_code=400, detail="Missing CategoryLevel1 or caseType")
+        
+        # Find matching items in Level1 based on category_level_1 and caseType
+        matching_level1 = [
+            item for item in Level1
+            if item["CategoryDisplayID"] == category_level_1 and item["CaseType"] == caseType
+        ]
+ 
+        # Extract DisplayName values
+        display_names = [item["DisplayName"] for item in matching_level1]
+ 
+        print("Matching DisplayNames:", display_names)
+ 
+        # Build the response structure
+        response_body = {
+            "responseBody": {
+            "messages": [
+                {
+                "code": "S000",
+                "message": "Success",
+                "type": "INFO"
+                }
+            ],
+            "value": {
+                "codes": [
+                {
+                    "description": "",
+                    "key": item["DisplayName"]
+                } for item in matching_level1 if "DisplayName" in item
+                ]
+            },
+            "isSuccess": True
+            }
+        }
+ 
+        return JSONResponse(content=response_body)
+ 
+    except HTTPException as http_ex:
+        raise http_ex
+    except Exception as ex:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(ex)}")
+ 
+ 
+@app.post("/formsintegrationLtwo")
+async def forms_integration(request: Request):
+    try:
+        json_body = await request.json()
+        print("Received payload 2:", json_body)
+ 
+        ## {'requestBody': {'Form': {'ItemTable': [{'COCODE1': 'Membership fees for various associations, organizations'}]}}}
+ 
+        # Extract fields from payload
+        # Extract fields from payload
+        form_data = json_body.get("requestBody", {}).get("Form", {})
+        # Extract CostCenterSearch from the first item in ItemTable
+        item_table = form_data.get("ItemTable", [])
+        text_field_1 = None
+        if item_table and isinstance(item_table, list):
+            text_field_1 = item_table[0].get("COCODE1")
+ 
+ 
+        print("L1 selected:", text_field_1)
+ 
+        if not text_field_1:
+            raise HTTPException(status_code=400, detail="Missing Level 1")
+        
+        # Find matching items in Level1 based on category_level_1 and caseType
+        # Find matching items in Level2 based on L1_DisplayName
+        matching_level1 = [
+            item for item in Level2
+            if item["L1_DisplayName"] == text_field_1
+        ]
+ 
+        # Extract DisplayName values
+        display_names = [item["DisplayName"] for item in matching_level1]
+ 
+        print("Matching DisplayNames:", display_names)
+ 
+        # Build the response structure
+        response_body = {
+            "responseBody": {
+            "messages": [
+                {
+                "code": "S000",
+                "message": "Success",
+                "type": "INFO"
+                }
+            ],
+            "value": {
+                "codes": [
+                {
+                    "description": "",
+                    "key": item["DisplayName"]
+                } for item in matching_level1 if "DisplayName" in item
+                ]
+            },
+            "isSuccess": True
+            }
+        }
+ 
+        return JSONResponse(content=response_body)
+ 
+    except HTTPException as http_ex:
+        raise http_ex
+    except Exception as ex:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(ex)}")
+ 
+ 
+@app.post("/currencyConver")
+async def forms_integration(request: Request):
+    try:
+        json_body = await request.json()
+        print("Received payload 2:", json_body)
+ 
+        # Extract fields from payload
+        form_data = json_body.get("requestBody", {}).get("Form", {})
+        # Extract Currency from DROPDOWN-1
+        currency = form_data.get("DROPDOWN-1", [])
+        text_field_1 = None        
+ 
+        # make host and tokenurl with user and password
+        # Create base64 encoded credentials
+        credentials = f"{user}:{password}"
+        encoded_credentials = base64.b64encode(credentials.encode()).decode()
+ 
+        # Make API call to get access token
+        auth_url = f"{host}{tokenurl}"
+        headers = {
+          "Authorization": f"Basic {encoded_credentials}",
+          "Content-Type": "application/json"
+        }
+ 
+        async with httpx.AsyncClient() as client:
+          token_response = await client.get(auth_url, headers=headers)
+          print("Token Response Status:", token_response.status_code)
+          token_response.raise_for_status()
+          token_data = token_response.json()
+          access_token = token_data.get("value", {}).get("access_token")
+ 
+        # Use the access_token to call the currency conversion API
+        if access_token:
+          currency_url = f"{host}{currencyconver}{currency}"
+          currency_headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+          }
+          
+          async with httpx.AsyncClient() as client:
+            currency_response = await client.get(currency_url, headers=currency_headers)
+            print("Currency Response Status:", currency_response.status_code)
+            currency_response.raise_for_status()
+            currency_data = currency_response.json()
+            exchange_rate = currency_data.get("value", [{}])[0].get("exchangeRate", 1.0)
+            print("Exchange Rate Data:", exchange_rate)
+            
+ 
+ 
+ 
+        # Build the response structure
+        response_body = {
+            "responseBody": {
+            "messages": [
+              {
+                "code": "S000",
+                "message": f"You have selected {currency} which is converted to Local JPY to {exchange_rate}",
+                "type": "INFO"
+              }
+            ],
+            "value": {
+              "Form": {
+                "NUMERIC-1": round(exchange_rate, 2)
+              }
+            },
+            "isSuccess": True
+            }
+        }
+ 
+        return JSONResponse(content=response_body)
+ 
+    except HTTPException as http_ex:
+        raise http_ex
+    except Exception as ex:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(ex)}")
+ 
+ 
+@app.post("/totalamount")
+async def forms_integration(request: Request):
+    try:
+      json_body = await request.json()
+      print("Received payload 2:", json_body)
+ 
+      # Extract fields from payload
+      form_data = json_body.get("requestBody", {}).get("Form", {})
+      # Extract Currency from DROPDOWN-1
+      currency = form_data.get("NUMERIC-1", [])
+      item_table = form_data.get("ItemTable", [])
+ 
+      total_amount = 0.0
+      
+      if item_table and isinstance(item_table, list):
+        for item in item_table:
+          amount_yen = item.get("Amount_yen", 0)
+          tax_amount = item.get("Taxamout", 0)
+          try:
+            item_total = (float(amount_yen) + float(tax_amount))
+            print(f"Item Amount: {amount_yen}, Tax: {tax_amount}, Currency: {currency}, Item Total: {item_total}")
+            total_amount += item_total
+            print(f"Running Total Amount: {total_amount}")
+          except (ValueError, TypeError):
+            print(f"Invalid amount or tax value: {amount_yen}, {tax_amount}, {currency}")
+ 
+      # Build the response structure
+      response_body = {
+        "responseBody": {
+          "messages": [
+            {
+              "code": "S000",
+              "message": f"You have selected {currency} which is converted to Local JPY to {total_amount}",
+              "type": "INFO"
+            }
+          ],
+          "value": {
+            "Form": {
+              "NUMERIC-2": round(total_amount, 2)
+            }
+          },
+          "isSuccess": True
+        }
+      }
+ 
+      return JSONResponse(content=response_body)
+ 
+    except HTTPException as http_ex:
+      raise http_ex
+    except Exception as ex:
+      raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(ex)}")
+ 
+
+@app.post("/AmtForForgien")
+async def forms_integration(request: Request):
+    try:
+        json_body = await request.json()
+        print("Received payload 2:", json_body)
+
+        # Extract fields from payload
+        form_data = json_body.get("requestBody", {}).get("Form", {})
+        # Extract Currency from NUMERIC-1
+        currency = form_data.get("NUMERIC-1", [])
+        item_table = form_data.get("ItemTable", [])
+
+        item_total = 0.0
+        item_tax_total = 0.0
+
+        if item_table and isinstance(item_table, list):
+            for item in item_table:
+                foreign_amount = item.get("ItemForeign", 0)
+                foreign_tax = item.get("TaxForeign", 0)
+
+                try:
+                    item_total = float(foreign_amount) * float(currency)
+                    item_tax_total = float(foreign_tax) * float(currency)
+                    print(f"Item Amount: {item_total}, Tax: {item_tax_total}, Currency: {currency}")
+                except (ValueError, TypeError):
+                    print(f"Invalid amount or tax value: {foreign_amount}, {foreign_tax}, {currency}")
+
+        # Build the response structure
+        response_body = {
+            "responseBody": {
+                "messages": [
+                    {
+                        "code": "S000",
+                        "message": f"You have entered {item_total}-{item_tax_total}",
+                        "type": "INFO"
+                    }
+                ],
+                "value": {
+                    "Form": {
+                        "ItemTable": [
+                            {
+                                "Amount_yen": item_tax_total,
+                                "Taxamount": item_total
+                            }
+                        ]
+                    }
+                },
+                "isSuccess": True
+            }
+        }
+
+        return JSONResponse(content=response_body)
+
+    except HTTPException as http_ex:
+        raise http_ex
+    except Exception as ex:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(ex)}")
+
+
+
+
+ 
+if __name__ == '__main__':
+    uvicorn.run(app, host='0.0.0.0', port=cf_port, log_level="info")
+    print('Prehook started....')
