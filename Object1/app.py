@@ -54,7 +54,7 @@ casetypes = [
                     "id": "11f013ac-30ef-5d9e-afdb-81359f020a00",
                     "displayId": "C280",
                     "name": "Company Code C280"
-                    }
+                    },
         "companyID": "35300000",
         "companyUUID": "11f01152-8c26-139e-afdb-813e42020a00",
         "internalOrder": "35305000",
