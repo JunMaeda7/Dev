@@ -1,9 +1,9 @@
 ---
 applications:
-  - name: YQUC_FM0001
-    memory: 512MB
+  - name: zquzsuba12
+    memory: 128MB
     disk_quota: 512M
-    host: YQUC_FM0001
+    host: zquzsuba12
     domain: cf.ap21.hana.ondemand.com
     buildpacks: ["python_buildpack"]
     command: python app.py
