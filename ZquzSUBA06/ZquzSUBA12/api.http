@@ -1,0 +1,17 @@
+
+
+###
+POST http://127.0.0.1:3000/BusinessArea
+Content-Type: application/json
+
+{
+  "requestBody": {
+    "Form": {
+      "F_meisai": [
+        {
+          "F_Cost_center": "(CB00280A01)研究_特許"
+        }
+      ]
+    }
+  }
+}
