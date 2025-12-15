@@ -1,0 +1,406 @@
+###
+POST http://127.0.0.1:3000/summary1
+Content-Type: application/json
+
+{
+  "requestBody": {
+    "case": {
+      "categoryLevel1": {
+        "name": "Domestic"
+      },
+      "extensions": {
+        "TransactionDate": "2025-11-18"
+      },
+      "categoryLevel2": {
+        "name": "Conference fees"
+      },
+      "caseType": "ZBTF"
+    }
+  }
+}
+
+###
+POST http://127.0.0.1:3000/summary1
+Content-Type: application/json
+
+{
+  "requestBody": {
+    "case": {
+      "categoryLevel1": {
+        "name": "海外"
+      },
+      "extensions": {
+        "TransactionDate": "2022-5-16"
+      },
+      "categoryLevel2": {
+        "name": ""
+      },
+      "caseType": "ZZXA"
+    }
+  }
+}
+
+###
+POST http://127.0.0.1:3000/summary1
+Content-Type: application/json
+
+{
+  "requestBody": {
+    "case": {
+      "categoryLevel1": {
+        "name": "経費の返納"
+      },
+      "extensions": {
+        "TransactionDate": "2027/4/1"
+      },
+      "categoryLevel2": {
+        "name": "当年度"
+      },
+      "caseType": "ZFA1"
+    }
+  }
+}
+
+###
+POST http://127.0.0.1:3000/summary2
+Content-Type: application/json
+
+{
+  "requestBody": {
+    "Form": {
+      "F_meisai": [
+        {
+          "F_summary1": "出向者分担金支払"
+        }
+      ]
+    },
+    "case": {
+      "categoryLevel1": {
+        "name": "国内"
+      },
+      "extensions": {
+        "TransactionDate": "2025/11/28"
+      },
+      "categoryLevel2": {
+        "name": "購買・その他"
+      },
+      "caseType": "ZZXA"
+    }
+  }
+}
+
+###
+POST http://127.0.0.1:3000/summary2
+Content-Type: application/json
+
+{
+  "requestBody": {
+    "Form": {
+      "F_meisai": [
+        {
+          "F_summary1": "研修・資格試験等費用"
+        }
+      ]
+    },
+    "case": {
+      "categoryLevel1": {
+        "name": "海外"
+      },
+      "extensions": {
+        "TransactionDate": "2025/11/28"
+      },
+      "categoryLevel2": {
+        "name": ""
+      },
+      "caseType": "ZZXA"
+    }
+  }
+}
+
+###
+POST http://127.0.0.1:3000/summary3
+Content-Type: application/json
+
+{
+  "requestBody": {
+    "Form": {
+      "F_meisai": [
+        {
+          "F_summary1": "業務委託・ｺﾝｻﾙ報酬等（相手が個人事業主等源泉対象）",
+          "F_summary2": "グループ単位で活用"
+        }
+      ]
+    },
+    "case": {
+      "categoryLevel1": {
+        "name": "海外"
+      },
+      "extensions": {
+        "TransactionDate": "2025/11/28"
+      },
+      "categoryLevel2": {
+        "name": ""
+      },
+      "caseType": "ZZXA"
+    }
+  }
+}
+
+
+###
+POST http://127.0.0.1:3000/summary4
+Content-Type: application/json
+
+{
+  "requestBody": {
+    "Form": {
+      "F_meisai": [
+        {
+          "F_summary1": "各種協会、団体等の会費",
+          "F_summary2": "国内に所在する各種協会、団体",
+          "F_summary3": "上記以外"
+        }
+      ]
+    },
+    "case": {
+      "categoryLevel1": {
+        "name": "国内"
+      },
+      "extensions": {
+        "TransactionDate": "2025/11/28"
+      },
+      "categoryLevel2": {
+        "name": "諸会費"
+      },
+      "caseType": "ZZXA"
+    }
+  }
+}
+
+
+###
+POST http://127.0.0.1:3000/summary5
+Content-Type: application/json
+
+{
+  "requestBody": {
+    "Form": {
+      "F_meisai": [
+        {
+          "F_summary1": "電算費経費",
+          "F_summary2": "ＯＡ関連物品の購入",
+          "F_summary3": "使用期間が1年以上のもの",
+          "F_summary4": "税抜単価100,000円未満の物品購入"
+        }
+      ]
+    },
+    "case": {
+      "categoryLevel1": {
+        "name": "国内"
+      },
+      "extensions": {
+        "TransactionDate": "2025/11/28"
+      },
+      "categoryLevel2": {
+        "name": "購買・その他"
+      },
+      "caseType": "ZZXA"
+    }
+  }
+}
+
+
+###
+POST http://127.0.0.1:3000/summary6
+Content-Type: application/json
+
+{
+  "requestBody": {
+    "Form": {
+      "F_meisai": [
+        {
+          "F_summary1": "企画担当",
+          "F_summary2": "消耗品費(事務用品･日用品･書籍･新聞購読料･ｶﾞｿﾘﾝ等)",
+          "F_summary3": "その他消耗品等の購入",
+          "F_summary4": "1単体税抜単価100,000円未満",
+          "F_summary5": "海外購入分(課税対象外･不課税･免税)"
+        }
+      ]
+    },
+    "case": {
+      "categoryLevel1": {
+        "name": "国内"
+      },
+      "extensions": {
+        "TransactionDate": "2025/11/28"
+      },
+      "categoryLevel2": {
+        "name": "購買・その他"
+      },
+      "caseType": "ZZXD"
+    }
+  }
+}
+
+###
+POST http://127.0.0.1:3000/AccountCode
+Content-Type: application/json
+
+{
+  "requestBody": {
+    "Form": {
+      "F_meisai": [
+        {
+          "F_summary1": "企画担当",
+          "F_summary2": "消耗品費(事務用品･日用品･書籍･新聞購読料･ｶﾞｿﾘﾝ等)",
+          "F_summary3": "その他消耗品等の購入",
+          "F_summary4": "1単体税抜単価100,000円未満",
+          "F_summary5": "国内購入分･消費税が含まれている(課税)",
+          "F_summary6": "TestB"
+        }
+      ]
+    }
+  }
+}
+
+
+###
+POST http://127.0.0.1:3000/AccountCode
+Content-Type: application/json
+
+{
+  "requestBody": {
+    "Form": {
+      "F_meisai": [
+        {
+          "F_summary5": "海外購入分(課税対象外･不課税･免税)",
+          "F_summary6": "TestA",
+          "F_summary1": "企画担当",
+          "F_summary2": "消耗品費(事務用品･日用品･書籍･新聞購読料･ｶﾞｿﾘﾝ等)",
+          "F_summary3": "その他消耗品等の購入",
+          "F_summary4": "1単体税抜単価100,000円未満"
+        }
+      ]
+    }
+  }
+}
+
+###
+POST http://127.0.0.1:3000/EnterExpenses
+Content-Type: application/json
+
+{
+  "requestBody": {
+    "Form": {
+      "F_meisai": [
+        {
+          "F_summary1": "社外関係者(JTBC勤務者以外)が同席した飲食代",
+          "F_summary2": "国内業者との取引：税抜単価10,000円超",
+          "F_summary3": "税率10％",
+          "F_summary4": "",
+          "F_summary5": "",
+          "F_summary6": ""
+        }
+      ]
+    }
+  }
+}
+
+
+
+###
+POST http://127.0.0.1:3000/Research
+Content-Type: application/json
+
+{
+  "requestBody": {
+    "Form": {
+      "F_meisai": [
+        {
+          "F_summary5": "海外購入分(課税対象外･不課税･免税)",
+          "F_summary6": "TestA",
+          "F_summary1": "企画担当",
+          "F_summary2": "消耗品費(事務用品･日用品･書籍･新聞購読料･ｶﾞｿﾘﾝ等)",
+          "F_summary3": "その他消耗品等の購入",
+          "F_summary4": "1単体税抜単価100,000円未満"
+        }
+      ]
+    }
+  }
+}
+
+
+
+###
+POST http://127.0.0.1:3000/DocCurrAmt
+Content-Type: application/json
+
+{
+  "requestBody": {
+    "Form": {
+      "F_meisai": [
+        {
+          "F_summary5": "",
+          "F_summary6": "",
+          "F_summary1": "社員のみ(JTBCへの出向者含む)での飲食代",
+          "F_summary2": "打合せ・会議に伴う喫茶・飲食代",
+          "F_summary3": "会議場所等、同一施設内での飲食",
+          "F_summary4": "海外出張時等の取引：単価3,000円以下",
+          "F_Doc_curr_amt": "8300",
+          "F_Enter_expenses": "",
+          "F_Account_Code": "4569000000",
+          "F_Quantity": 2,
+          "F_Tax_amount": "5500"
+        }
+      ]
+    }
+  }
+}
+
+
+###
+POST http://127.0.0.1:3000/DomeCurrAmtOth
+Content-Type: application/json
+
+{
+  "requestBody": {
+    "Form": {
+      "F_meisai": [
+        {
+          "F_summary5": "摘要5",
+          "F_summary6": "摘要6金額閾値上限",
+          "F_summary1": "業務委託・ｺﾝｻﾙ報酬等（相手が個人事業主等源泉対象）",
+          "F_summary2": "ユーザ検証テスト用",
+          "F_summary3": "摘要3",
+          "F_summary4": "摘要4",
+          "F_Enter_expenses": "",
+          "F_Account_Code": "4560000000",
+          "F_Quantity": "1",
+          "F_Dome_curr_amt": "5000"
+        }
+      ]
+    }
+  }
+}
+
+
+###
+POST https://zquzsuba06.cfapps.ap21.hana.ondemand.com/AccountCode
+Content-Type: application/json
+
+{
+  "requestBody": {
+    "Form": {
+      "F_meisai": [
+        {
+          "F_summary1": "企画担当",
+          "F_summary2": "消耗品費(事務用品･日用品･書籍･新聞購読料･ｶﾞｿﾘﾝ等)",
+          "F_summary3": "その他消耗品等の購入",
+          "F_summary4": "1単体税抜単価100,000円未満",
+          "F_summary5": "海外購入分(課税対象外･不課税･免税)",
+          "F_summary6": "TestA"
+        }
+      ]
+    }
+  }
+}

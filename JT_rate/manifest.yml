@@ -1,8 +1,0 @@
-applications:
-  - name: jtfinal
-    memory: 356MB
-    disk_quota: 1512M
-    host: jtfinal
-    domain: cfapps.eu10.hana.ondemand.com
-    buildpacks: ["python_buildpack"]
-    command: python app.py
