@@ -6,7 +6,8 @@ from hdbcli import dbapi
 import json
 from datetime import datetime, date, timedelta, timezone
 import calendar
-from typing import Optional
+from typing import Optional, List
+import traceback
 
 # 日本時間（UTC+9）
 JST = timezone(timedelta(hours=9))
@@ -16,90 +17,58 @@ app = FastAPI(
     title="JT Self-Service Integration (Pattern A)",
     description=description,
     summary="HANAマスタを使った計算を /casesubs で実行",
-    version="0.0.1",
-    terms_of_service="http://example.com/terms/",
-    license_info={
-        "name": "Apache 2.0",
-        "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
-    },
+    version="0.3.0",
 )
 
 cf_port = int(os.getenv("PORT", 3000))
 print("Start....")
 
+
 # =========================================
-# HANA接続（起動時に一度だけ）
+# HANA接続（起動時に一度だけ）※全テーブル必須
 # =========================================
+def load_table_required(cursor, table_name: str) -> list:
+    cursor.execute(f"SELECT * FROM {table_name}")
+    rows = cursor.fetchall()
+    columns = [c[0] for c in cursor.description]
+    table = [dict(zip(columns, r)) for r in rows]
+    print(f"{table_name} loaded: {len(table)} rows")
+    return table
+
+
+def env_required(key: str) -> str:
+    v = os.getenv(key)
+    if not v:
+        raise RuntimeError(f"Missing required env var: {key}")
+    return v
+
+
 try:
     conn = dbapi.connect(
-        address="6476e830-defb-4b04-871c-7c375442b10a.hana.prod-ap21.hanacloud.ondemand.com",
-        port=443,
-        user="DBADMIN",
-        password="11223344556677889900Aeee"
+        address=env_required("HANA_ADDRESS"),
+        port=int(os.getenv("HANA_PORT", "443")),
+        user=env_required("HANA_USER"),
+        password=env_required("HANA_PASSWORD"),
     )
     cursor = conn.cursor()
 
-    # ====== TBL_BPS 仕入先マスタ ======
-    cursor.execute("SELECT * FROM TBL_BPS")
-    rows = cursor.fetchall()
-    columns = [col[0] for col in cursor.description]
-    TBL_BPS = [dict(zip(columns, row)) for row in rows]
-    print("TBL_BPS loaded:", json.dumps(TBL_BPS, ensure_ascii=False, default=str))
-
-    # ====== TBL_PMT 支払条件マスタ ======
-    cursor.execute("SELECT * FROM TBL_PMT")
-    rows = cursor.fetchall()
-    columns = [col[0] for col in cursor.description]
-    TBL_PMT = [dict(zip(columns, row)) for row in rows]
-    print("TBL_PMT loaded:", json.dumps(TBL_PMT, ensure_ascii=False, default=str))
-
-    # ====== TBL_POST_DATE 転記日判定マスタ ======
-    cursor.execute("SELECT * FROM TBL_POST_DATE")
-    rows = cursor.fetchall()
-    columns = [col[0] for col in cursor.description]
-    TBL_POST_DATE = [dict(zip(columns, row)) for row in rows]
-    print("TBL_POST_DATE loaded:", json.dumps(TBL_POST_DATE, ensure_ascii=False, default=str))
-
-    # ====== TBL_EXCHANGE_RATE 為替レートマスタ ======
-    cursor.execute("SELECT * FROM TBL_EXCHANGE_RATE")
-    rows = cursor.fetchall()
-    columns = [col[0] for col in cursor.description]
-    TBL_EXCHANGE_RATE = [dict(zip(columns, row)) for row in rows]
-    print("TBL_EXCHANGE_RATE loaded:", json.dumps(TBL_EXCHANGE_RATE, ensure_ascii=False, default=str))
-
-    # ====== TBL_USER_COMPANY ユーザ会社マスタ ======
-    try:
-        cursor.execute("SELECT * FROM TBL_USER_COMPANY")
-        rows = cursor.fetchall()
-        columns = [col[0] for col in cursor.description]
-        TBL_USER_COMPANY = [dict(zip(columns, row)) for row in rows]
-        print("TBL_USER_COMPANY loaded:", json.dumps(TBL_USER_COMPANY, ensure_ascii=False, default=str))
-    except Exception as ex_uc:
-        print(f"Failed to load TBL_USER_COMPANY: {ex_uc}")
-        TBL_USER_COMPANY = []
-
-    # ====== TBL_ORG_COMPANY 組織会社マスタ ======
-    try:
-        cursor.execute("SELECT * FROM TBL_ORG_COMPANY")
-        rows = cursor.fetchall()
-        columns = [col[0] for col in cursor.description]
-        TBL_ORG_COMPANY = [dict(zip(columns, row)) for row in rows]
-        print("TBL_ORG_COMPANY loaded:", json.dumps(TBL_ORG_COMPANY, ensure_ascii=False, default=str))
-    except Exception as ex_oc:
-        print(f"Failed to load TBL_ORG_COMPANY: {ex_oc}")
-        TBL_ORG_COMPANY = []
+    # ★全部必須テーブル
+    TBL_BPS = load_table_required(cursor, "TBL_BPS")
+    TBL_BPC = load_table_required(cursor, "TBL_BPC")
+    TBL_PMT = load_table_required(cursor, "TBL_PMT")
+    TBL_POST_DATE = load_table_required(cursor, "TBL_POST_DATE")
+    TBL_EXCHANGE_RATE = load_table_required(cursor, "TBL_EXCHANGE_RATE")
+    TBL_USER_COMPANY = load_table_required(cursor, "TBL_USER_COMPANY")
+    TBL_ORG_COMPANY = load_table_required(cursor, "TBL_ORG_COMPANY")
 
     cursor.close()
     conn.close()
 
 except Exception as ex:
-    print(f"Failed to load HANA tables: {str(ex)}")
-    TBL_BPS = []
-    TBL_PMT = []
-    TBL_POST_DATE = []
-    TBL_EXCHANGE_RATE = []
-    TBL_USER_COMPANY = []
-    TBL_ORG_COMPANY = []
+    print("❌ Failed loading required HANA tables. Stop startup.")
+    print(str(ex))
+    traceback.print_exc()
+    raise
 
 
 @app.get("/health")
@@ -107,20 +76,17 @@ async def health():
     return JSONResponse(content={"status": "running"}, status_code=200)
 
 
-# 日付ユーティリティ
+# =========================================
+# 日付ユーティリティ（JSTベース）
+# =========================================
 def parse_date_yyyy_mm_dd(s: str) -> Optional[date]:
     try:
         return datetime.strptime(s, "%Y-%m-%d").date()
-    except Exception as e:
-        print(f"⚠ Failed to parse date '{s}' as YYYY-MM-DD: {e}")
+    except Exception:
         return None
 
 
 def add_months(base_date: date, months: int) -> date:
-    """
-    base_date から months ヶ月加減算した日付を返す。
-    日は、移動先月の末日を超えないように調整する。
-    """
     total_month = (base_date.month - 1) + months
     year = base_date.year + total_month // 12
     month = (total_month % 12) + 1
@@ -130,16 +96,10 @@ def add_months(base_date: date, months: int) -> date:
 
 
 def zfill_8(s: Optional[str]) -> Optional[str]:
-    if not s:
-        return None
-    return str(s).zfill(8)
+    return None if not s else str(s).zfill(8)
 
 
 def to_circled_number(n: int) -> str:
-    """
-    1 → ①, 2 → ② ... 20 → ⑳
-    21以上は "n." にフォールバック
-    """
     if 1 <= n <= 20:
         return chr(ord("①") + n - 1)
     return f"{n}."
@@ -151,89 +111,138 @@ def to_circled_number(n: int) -> str:
 @app.post("/casesubs")
 async def casesubs(request: Request):
     try:
-        # JST の現在時刻と日付
         now_jst = datetime.now(JST)
         timestamp = now_jst.strftime("%Y-%m-%d %H:%M:%S")
         today = now_jst.date()
 
         json_body = await request.json()
-        print("Received (/casesubs):")
-        print(json.dumps(json_body, ensure_ascii=False, indent=2))
 
         rb = json_body.get("requestBody", {}) or {}
         case_data = rb.get("case", {}) or {}
         form_data = rb.get("Form", {}) or {}
 
-        # --- case 側データ ---
-        supplier = case_data.get("supplier") or {}
-        company = case_data.get("company") or {}
-        service_team = case_data.get("serviceTeam") or {}
-        case_type = case_data.get("caseType")
+        # --------------------------------------------------------
+        # 0) Debug: 入力(requestBody)の全項目ログ（全ロジックの最初に出力）
+        #   ※ 1ログにまとめて、項目ごとに改行
+        #   ※ caseType はここで取得して mode 判別に使う
+        # --------------------------------------------------------
+        def v(x):
+            return "None" if x is None else x
 
-        extensions = case_data.get("extensions", {}) or {}
+        user_data = rb.get("user") or {}
+        user_admin = user_data.get("adminData") or {}
+
+        category1 = case_data.get("categoryLevel1") or {}
+        ext = case_data.get("extensions") or {}
+
+        supplier_data = case_data.get("supplier") or {}
+        processor_data = case_data.get("processor") or {}
+        service_team_data = case_data.get("serviceTeam") or {}
+        account_data = case_data.get("account") or {}
+
+        # ★caseTypeはここでのみ取得（ユーティリティでは扱わない）
+        case_type_raw = case_data.get("caseType")
+        case_type_str = "" if case_type_raw is None else str(case_type_raw).strip()
+
+        # ★取得したcaseTypeをそのまま判別に使う（ZZX*/ZZY*）
+        if case_type_str.startswith("ZZY"):
+            mode = "ZZY"
+        else:
+            mode = "DEFAULT(ZZX等)"  # ZZX* または空/その他
+
+        debug_lines_in = [
+            "========== INPUT DEBUG START (before all logic) ==========",
+            f"requestBody.case.caseType = {v(case_type_str)}",
+            f"mode(ZZX/ZZY判別) = {v(mode)}",
+
+            # requestBody.Form
+            f"requestBody.Form.F_CaseErrorCheck = {v(form_data.get('F_CaseErrorCheck'))}",
+            f"requestBody.Form.F_Currency = {v(form_data.get('F_Currency'))}",
+
+            # requestBody.user.adminData
+            f"requestBody.user.adminData.createdByName = {v(user_admin.get('createdByName'))}",
+            f"requestBody.user.adminData.updatedBy = {v(user_admin.get('updatedBy'))}",
+            f"requestBody.user.adminData.createdBy = {v(user_admin.get('createdBy'))}",
+            f"requestBody.user.adminData.updatedByName = {v(user_admin.get('updatedByName'))}",
+
+            # requestBody.case.categoryLevel1
+            f"requestBody.case.categoryLevel1.displayId = {v(category1.get('displayId'))}",
+
+            # requestBody.case.extensions
+            f"requestBody.case.extensions.Total_amount = {v(ext.get('Total_amount'))}",
+            f"requestBody.case.extensions.Postingdate = {v(ext.get('Postingdate'))}",
+            f"requestBody.case.extensions.PaymentDate = {v(ext.get('PaymentDate'))}",
+            f"requestBody.case.extensions.Teijitu = {v(ext.get('Teijitu'))}",
+            f"requestBody.case.extensions.Total_amount_oth = {v(ext.get('Total_amount_oth'))}",
+            f"requestBody.case.extensions.Request_date = {v(ext.get('Request_date'))}",
+            f"requestBody.case.extensions.CompanyCode = {v(ext.get('CompanyCode'))}",
+            f"requestBody.case.extensions.paymentmethod = {v(ext.get('paymentmethod'))}",
+            f"requestBody.case.extensions.TransactionDate = {v(ext.get('TransactionDate'))}",
+
+            # requestBody.case.supplier
+            f"requestBody.case.supplier.id = {v(supplier_data.get('id'))}",
+            f"requestBody.case.supplier.displayId = {v(supplier_data.get('displayId'))}",
+
+            # requestBody.case (case自身)
+            f"requestBody.case.id = {v(case_data.get('id'))}",
+            f"requestBody.case.displayId = {v(case_data.get('displayId'))}",
+
+            # requestBody.case.processor
+            f"requestBody.case.processor.name = {v(processor_data.get('name'))}",
+            f"requestBody.case.processor.id = {v(processor_data.get('id'))}",
+            f"requestBody.case.processor.displayId = {v(processor_data.get('displayId'))}",
+
+            # requestBody.case.serviceTeam
+            f"requestBody.case.serviceTeam.id = {v(service_team_data.get('id'))}",
+            f"requestBody.case.serviceTeam.displayId = {v(service_team_data.get('displayId'))}",
+
+            # requestBody.case.account
+            f"requestBody.case.account.id = {v(account_data.get('id'))}",
+            f"requestBody.case.account.displayId = {v(account_data.get('displayId'))}",
+            f"requestBody.case.account.defaultExternalBusinessPartnerId = {v(account_data.get('defaultExternalBusinessPartnerId'))}",
+
+            # requestBody.case.status
+            f"requestBody.case.status = {v(case_data.get('status'))}",
+
+            "========== INPUT DEBUG END ==========",
+        ]
+        print("\n".join(debug_lines_in))
+
+        # --------------------------------------------------------
+        # ここから先：従来ロジック（reportedOn は使わない）
+        # --------------------------------------------------------
+        supplier = supplier_data or {}
+        account = account_data or {}
+        company = case_data.get("company") or {}
+        service_team = service_team_data or {}
+        extensions = ext or {}
 
         transaction_date_str = extensions.get("TransactionDate")
         company_code_from_ext = extensions.get("CompanyCode")
         teijitu_flag = extensions.get("Teijitu")
-        request_date_str = extensions.get("Request_date")
+        request_date_str = extensions.get("Request_date")  # ★PostHookで代入された値のみ使用
         ext_postingdate_str = extensions.get("Postingdate")
         ext_paymentdate_str = extensions.get("PaymentDate")
         total_amount = extensions.get("Total_amount")
         total_amount_oth = extensions.get("Total_amount_oth")
 
-        # paymentmethod はマスタ優先で上書きしたいので、初期値は None
-        computed_paymentmethod: Optional[str] = None
-        computed_paymentdate: Optional[str] = None
-
-        # 申請者 / 処理者
-        employee = case_data.get("employee") or {}
-        processor = case_data.get("processor") or {}
-
-        employee_emp_disp_raw = employee.get("employeeDisplayId")
-        employee_disp_raw = employee.get("displayId")
-        processor_emp_disp_raw = processor.get("employeeDisplayId")
-        processor_disp_raw = processor.get("displayId")
-
-        employee_compare_id = employee_emp_disp_raw or employee_disp_raw
-        processor_compare_id = processor_emp_disp_raw or processor_disp_raw
-
-        # --- Form 側データ ---
         f_currency = form_data.get("F_Currency")
 
-        # --------------------------------------------------------
-        # 共通：company code & supplier & serviceTeam
-        # --------------------------------------------------------
-        company_code_from_company = None
-        if isinstance(company, dict):
-            company_code_from_company = company.get("displayId")
+        # 申請者 / 処理者（ID比較用）
+        employee = case_data.get("employee") or {}
+        processor = processor_data or {}
+        employee_compare_id = employee.get("employeeDisplayId") or employee.get("displayId")
+        processor_compare_id = processor.get("employeeDisplayId") or processor.get("displayId")
 
-        supplier_display_id = None
-        if isinstance(supplier, dict):
-            supplier_display_id = supplier.get("displayId")
+        # company code
+        company_code_from_company = company.get("displayId") if isinstance(company, dict) else None
 
-        service_team_disp_id_raw = None
-        if isinstance(service_team, dict):
-            service_team_disp_id_raw = service_team.get("displayId")
-
-        print(f"→ caseType: {case_type}")
-        print(f"→ company_code(from company): {company_code_from_company}")
-        print(f"→ company_code(from extensions.CompanyCode): {company_code_from_ext}")
-        print(f"→ supplier_display_id: {supplier_display_id}")
-        print(f"→ TransactionDate: {transaction_date_str}")
-        print(f"→ Request_date: {request_date_str}")
-        print(f"→ Teijitu: {teijitu_flag}")
-        print(f"→ Total_amount: {total_amount}")
-        print(f"→ Total_amount_oth: {total_amount_oth}")
-        print(f"→ employeeEmployeeDisplayId(raw): {employee_emp_disp_raw!r}")
-        print(f"→ employeeDisplayId(raw): {employee_disp_raw!r}")
-        print(f"→ processorEmployeeDisplayId(raw): {processor_emp_disp_raw!r}")
-        print(f"→ processorDisplayId(raw): {processor_disp_raw!r}")
-        print(f"→ ext Postingdate: {ext_postingdate_str}")
-        print(f"→ ext PaymentDate: {ext_paymentdate_str}")
-        print(f"→ serviceTeam.displayId(raw): {service_team_disp_id_raw!r}")
+        supplier_display_id = supplier.get("displayId") if isinstance(supplier, dict) else None
+        account_display_id = account.get("displayId") if isinstance(account, dict) else None
+        service_team_disp_id_raw = service_team.get("displayId") if isinstance(service_team, dict) else None
 
         # --------------------------------------------------------
-        # 1) Postingdate の計算（TBL_POST_DATE 使用）
+        # 1) Postingdate 計算（ZZYでもデフォルト通りに計算）
         # --------------------------------------------------------
         new_postingdate: Optional[str] = None
 
@@ -242,245 +251,139 @@ async def casesubs(request: Request):
             req_date = parse_date_yyyy_mm_dd(request_date_str)
 
             if tx_date and req_date:
-                print(f"→ Postingdate logic: tx_date={tx_date}, request_date={req_date}")
-
                 if tx_date.year == req_date.year and tx_date.month == req_date.month:
                     new_postingdate = tx_date.strftime("%Y-%m-%d")
-                    print("✅ Same year-month. Postingdate = TransactionDate.")
                 else:
-                    print("→ Different year-month. Apply TBL_POST_DATE logic.")
-
                     fiscal_year = req_date.year
 
-                    def match_post_date_row(row):
+                    def match_post_row(row):
                         comp = row.get("COMPANY_CODE")
                         fy = row.get("FISCAL_YEAR")
                         try:
                             fy_int = int(fy) if fy is not None else None
-                        except ValueError:
+                        except Exception:
                             fy_int = None
-                        return (
-                            fy_int == fiscal_year
-                            and (
-                                (company_code_from_company and comp == company_code_from_company)
-                                or (company_code_from_ext and comp == company_code_from_ext)
-                            )
+                        return fy_int == fiscal_year and (
+                            (company_code_from_company and comp == company_code_from_company)
+                            or (company_code_from_ext and comp == company_code_from_ext)
                         )
 
-                    post_row = next(
-                        (row for row in TBL_POST_DATE if match_post_date_row(row)),
-                        None,
-                    )
-
-                    if post_row:
-                        print(
-                            f"✅ Found POST_DATE row. COMPANY_CODE={post_row.get('COMPANY_CODE')}, "
-                            f"FISCAL_YEAR={post_row.get('FISCAL_YEAR')}"
-                        )
-                        month_to_col = {
-                            1: "M_JAN",
-                            2: "M_FEB",
-                            3: "M_MAR",
-                            4: "M_APR",
-                            5: "M_MAY",
-                            6: "M_JUN",
-                            7: "M_JUL",
-                            8: "M_AUG",
-                            9: "M_SEP",
-                            10: "M_OCT",
-                            11: "M_NOV",
-                            12: "M_DEC",
+                    row = next((r for r in TBL_POST_DATE if match_post_row(r)), None)
+                    if row:
+                        month_cols = {
+                            1: "M_JAN", 2: "M_FEB", 3: "M_MAR", 4: "M_APR",
+                            5: "M_MAY", 6: "M_JUN", 7: "M_JUL", 8: "M_AUG",
+                            9: "M_SEP", 10: "M_OCT", 11: "M_NOV", 12: "M_DEC",
                         }
-                        month_col = month_to_col.get(req_date.month)
-                        day_raw = post_row.get(month_col)
-
+                        col = month_cols.get(req_date.month)
+                        day_raw = row.get(col)
                         try:
-                            day_val = int(day_raw) if day_raw is not None else 0
-                        except ValueError:
+                            day_val = int(day_raw)
+                        except Exception:
                             day_val = 0
 
                         if day_val > 0:
                             last_day = calendar.monthrange(req_date.year, req_date.month)[1]
-                            day = min(day_val, last_day)
-                            comparison_date = date(req_date.year, req_date.month, day)
-                            print(
-                                f"→ comparison_date(from TBL_POST_DATE): {comparison_date}, "
-                                f"request_date: {req_date}"
-                            )
+                            comp_date = date(req_date.year, req_date.month, min(day_val, last_day))
 
-                            if comparison_date >= req_date:
+                            if comp_date >= req_date:
                                 new_postingdate = tx_date.strftime("%Y-%m-%d")
-                                print("✅ comparison_date >= Request_date. Postingdate = TransactionDate.")
                             else:
-                                total_month = (tx_date.month - 1) + 1
-                                year = tx_date.year + total_month // 12
-                                month = (total_month % 12) + 1
-                                next_month_first = date(year, month, 1)
-                                new_postingdate = next_month_first.strftime("%Y-%m-%d")
-                                print(
-                                    "✅ comparison_date < Request_date. "
-                                    f"Postingdate = first day of next month of TransactionDate: {next_month_first}"
-                                )
+                                nm = add_months(tx_date, 1)
+                                new_postingdate = nm.replace(day=1).strftime("%Y-%m-%d")
                         else:
                             new_postingdate = tx_date.strftime("%Y-%m-%d")
-                            print(
-                                f"⚠ Invalid or zero day in TBL_POST_DATE({month_col}={day_raw}). "
-                                "Fallback: Postingdate = TransactionDate."
-                            )
                     else:
                         new_postingdate = tx_date.strftime("%Y-%m-%d")
-                        print(
-                            "❌ No matching row in TBL_POST_DATE. "
-                            "Fallback: Postingdate = TransactionDate."
-                        )
             else:
-                if transaction_date_str:
-                    new_postingdate = transaction_date_str
-                    print(
-                        "⚠ Could not parse tx_date or request_date. "
-                        "Fallback: Postingdate = TransactionDate string."
-                    )
+                new_postingdate = transaction_date_str
         elif transaction_date_str:
             new_postingdate = transaction_date_str
-            print("→ Request_date not available. Postingdate = TransactionDate (simple copy).")
-        else:
-            print("→ TransactionDate not found. Postingdate not calculated.")
 
         # --------------------------------------------------------
-        # 2) paymentmethod / PaymentDate の計算
+        # 2) paymentmethod / PaymentDate
         # --------------------------------------------------------
-        try:
-            payment_terms = None
-            pmt_row = None
+        computed_paymentmethod: Optional[str] = None
+        computed_paymentdate: Optional[str] = None
 
+        def match_company_code(row):
+            comp = row.get("COMPANY_CODE")
+            return (
+                (company_code_from_company and comp == company_code_from_company)
+                or (company_code_from_ext and comp == company_code_from_ext)
+            )
+
+        payment_terms = None
+        pmt_row = None
+
+        # PAYMENT_TERMS 取得
+        if mode == "DEFAULT(ZZX等)":
+            # BPS: SUPPLIER × COMPANY_CODE
             if supplier_display_id and (company_code_from_company or company_code_from_ext):
-                def match_company_code(row):
-                    comp = row.get("COMPANY_CODE")
-                    return (
-                        (company_code_from_company and comp == company_code_from_company)
-                        or (company_code_from_ext and comp == company_code_from_ext)
-                    )
-
                 bps_row = next(
-                    (
-                        row
-                        for row in TBL_BPS
-                        if row.get("SUPPLIER") == supplier_display_id
-                        and match_company_code(row)
-                    ),
+                    (r for r in TBL_BPS if r.get("SUPPLIER") == supplier_display_id and match_company_code(r)),
                     None,
                 )
-
                 if bps_row:
                     payment_terms = bps_row.get("PAYMENT_TERMS")
-                    print(
-                        f"✅ Found BPS row. "
-                        f"SUPPLIER={supplier_display_id}, "
-                        f"COMPANY_CODE={bps_row.get('COMPANY_CODE')}, "
-                        f"PAYMENT_TERMS={payment_terms}"
-                    )
-                else:
-                    print(
-                        "❌ No matching row in TBL_BPS for "
-                        f"SUPPLIER={supplier_display_id} and "
-                        f"COMPANY_CODE in "
-                        f"({company_code_from_company}, {company_code_from_ext})."
-                    )
-
-                if payment_terms:
-                    pmt_row = next(
-                        (
-                            row
-                            for row in TBL_PMT
-                            if row.get("PAYMENT_TERMS") == payment_terms
-                        ),
-                        None,
-                    )
-
-                    if pmt_row:
-                        payment_method = pmt_row.get("PAYMENT_METHOD")
-                        print(f"✅ Found PMT row. PAYMENT_METHOD = {payment_method}")
-                        if payment_method:
-                            computed_paymentmethod = payment_method
-                    else:
-                        print("❌ No matching row in TBL_PMT for PAYMENT_TERMS.")
-            else:
-                print(
-                    "supplier_display_id or both company_code(from company) / "
-                    "company_code(from extensions) are missing. Skip DB mapping for paymentmethod."
+        else:
+            # ZZY: BPC: CUSTOMER(account.displayId) × COMPANY_CODE
+            if account_display_id and (company_code_from_company or company_code_from_ext):
+                bpc_row = next(
+                    (r for r in TBL_BPC if r.get("CUSTOMER") == account_display_id and match_company_code(r)),
+                    None,
                 )
+                if bpc_row:
+                    payment_terms = bpc_row.get("PAYMENT_TERMS")
 
-            # PaymentDate 計算（Teijitu == "1" のときのみ）
-            if teijitu_flag == "1":
-                if pmt_row:
-                    try:
-                        z_mona = int(pmt_row.get("ZMONA") or 0)
-                        z_fael = int(pmt_row.get("ZFAEL") or 0)
-                        print(f"→ ZMONA: {z_mona}, ZFAEL: {z_fael}")
-                    except ValueError:
-                        z_mona = 0
-                        z_fael = 0
-                        print("⚠ ZMONA/ZFAEL parse error. Treat as 0/0.")
+        # PMT: PAYMENT_METHOD
+        if payment_terms:
+            pmt_row = next((r for r in TBL_PMT if r.get("PAYMENT_TERMS") == payment_terms), None)
+            if pmt_row and pmt_row.get("PAYMENT_METHOD"):
+                computed_paymentmethod = pmt_row.get("PAYMENT_METHOD")
 
-                    if not (z_mona == 0 and z_fael == 0):
-                        posting_for_pmt = new_postingdate or ext_postingdate_str
-                        if posting_for_pmt:
-                            try:
-                                base_date = datetime.strptime(posting_for_pmt, "%Y-%m-%d").date()
+        # PaymentDate
+        if mode == "DEFAULT(ZZX等)":
+            # Teijitu=1 の時だけ計算
+            if teijitu_flag == "1" and pmt_row:
+                try:
+                    z_mona = int(pmt_row.get("ZMONA") or 0)
+                    z_fael = int(pmt_row.get("ZFAEL") or 0)
+                except Exception:
+                    z_mona, z_fael = 0, 0
 
-                                total_month = (base_date.month - 1) + z_mona
-                                year = base_date.year + total_month // 12
-                                month = (total_month % 12) + 1
-
-                                last_day = calendar.monthrange(year, month)[1]
-
-                                if z_fael == 31:
-                                    day = last_day
-                                else:
-                                    day = min(z_fael, last_day)
-
-                                computed_paymentdate = date(year, month, day).strftime("%Y-%m-%d")
-                                print(f"✅ PaymentDate calculated: {computed_paymentdate}")
-                            except Exception as e_pd:
-                                print(f"⚠ Failed to calculate PaymentDate: {e_pd}")
-                        else:
-                            print("→ Postingdate not available. Cannot calculate PaymentDate.")
-                    else:
-                        print("→ ZMONA and ZFAEL are both 0. Skip PaymentDate assignment.")
-                else:
-                    print("→ No PMT row. Skip PaymentDate assignment.")
-            else:
-                print("→ Teijitu is not '1'. Skip PaymentDate assignment.")
-
-        except Exception as e:
-            print(f"⚠ Error while mapping paymentmethod/PaymentDate from HANA: {e}")
+                if not (z_mona == 0 and z_fael == 0):
+                    posting_for_pmt = new_postingdate or ext_postingdate_str
+                    if posting_for_pmt:
+                        base_date = parse_date_yyyy_mm_dd(posting_for_pmt)
+                        if base_date:
+                            total_month = (base_date.month - 1) + z_mona
+                            year = base_date.year + total_month // 12
+                            month = (total_month % 12) + 1
+                            last_day = calendar.monthrange(year, month)[1]
+                            day = last_day if z_fael == 31 else min(z_fael, last_day)
+                            computed_paymentdate = date(year, month, day).strftime("%Y-%m-%d")
+        else:
+            # ZZYはTeijitu無視、PaymentDateは計算しない（代入しない）
+            computed_paymentdate = None
 
         # --------------------------------------------------------
-        # 3) F_Rate: TransactionDate × F_Currency → TBL_EXCHANGE_RATE
-        #    常に上書き（JPY の場合は必ず ""）
+        # 3) F_Rate
         # --------------------------------------------------------
         rate_value = ""
 
         if transaction_date_str and f_currency and TBL_EXCHANGE_RATE:
-            txn_date_str = str(transaction_date_str)
-            if "T" in txn_date_str:
-                txn_date_str = txn_date_str.split("T")[0]
+            txn_date_str = str(transaction_date_str).split("T")[0]
 
             if f_currency == "JPY":
-                # JPY の場合は常にブランク
                 rate_value = ""
-                print("→ F_Currency is JPY. F_Rate will be set to empty string.")
             else:
                 matched_rate = None
                 for row in TBL_EXCHANGE_RATE:
-                    quoted = str(row.get("QUOTED_DATE"))
-                    if " " in quoted:
-                        quoted = quoted.split(" ")[0]
+                    quoted = str(row.get("QUOTED_DATE")).split(" ")[0]
                     if quoted == txn_date_str and row.get("UNIT_CURRENCY") == f_currency:
                         matched_rate = row.get("EXCHANGE_RATE")
                         break
-
-                print(f"Matched EXCHANGE_RATE for {txn_date_str} / {f_currency}: {matched_rate}")
 
                 if matched_rate is not None:
                     try:
@@ -489,69 +392,42 @@ async def casesubs(request: Request):
                         rate_value = str(matched_rate)
                 else:
                     rate_value = ""
-        else:
-            print("→ F_Rate not calculated (missing TransactionDate or F_Currency or TBL_EXCHANGE_RATE empty).")
-            rate_value = ""
 
         # --------------------------------------------------------
-        # 4) Form への代入
+        # 4) Formへ代入
         # --------------------------------------------------------
         response_form: dict = {}
 
-        # Postingdate → F_Posting_Date
-        final_posting_date: Optional[str] = None
-        if new_postingdate:
-            response_form["F_Posting_Date"] = new_postingdate
-            final_posting_date = new_postingdate
-        elif ext_postingdate_str:
-            response_form["F_Posting_Date"] = ext_postingdate_str
-            final_posting_date = ext_postingdate_str
+        final_posting_date = new_postingdate or (ext_postingdate_str if ext_postingdate_str is not None else "")
+        response_form["F_Posting_Date"] = final_posting_date
 
-        # PaymentDate → F_Payment_Date
         if computed_paymentdate is not None:
             final_payment_date = computed_paymentdate
         else:
-            if ext_paymentdate_str is not None:
-                final_payment_date = ext_paymentdate_str
-            else:
-                final_payment_date = ""
-
-        # 常に上書き（空文字も含めて）
+            final_payment_date = ext_paymentdate_str if ext_paymentdate_str is not None else ""
         response_form["F_Payment_Date"] = final_payment_date
 
-        # paymentmethod → F_Payment_Method（マスタ優先・上書き）
-        if computed_paymentmethod:
-            response_form["F_Payment_Method"] = computed_paymentmethod
-
-        # F_Rate 常に上書き
+        response_form["F_Payment_Method"] = computed_paymentmethod or ""
         response_form["F_Rate"] = rate_value
 
-        # F_Total_Amount_C：case.extensions から（Total_amount_oth 優先）
-        f_total_amount_value = None
         if total_amount_oth not in (None, "", 0):
-            f_total_amount_value = str(total_amount_oth)
-            print(f"→ F_Total_Amount_C set from Total_amount_oth: {total_amount_oth}")
+            response_form["F_Total_Amount_C"] = str(total_amount_oth)
         elif total_amount not in (None, "", 0):
-            f_total_amount_value = str(total_amount)
-            print(f"→ F_Total_Amount_C set from Total_amount: {total_amount}")
-
-        if f_total_amount_value is not None:
-            response_form["F_Total_Amount_C"] = f_total_amount_value
+            response_form["F_Total_Amount_C"] = str(total_amount)
 
         # --------------------------------------------------------
-        # 5) エラーメッセージ & errorcheck ロジック
+        # 5) エラーメッセージ & check
         # --------------------------------------------------------
-        errors = []
+        errors: List[str] = []
 
         def add_error(msg: str):
             errors.append(msg)
 
-        # 5-1) 申請者と処理者の employeeDisplayId / displayId が一致
+        # 5-1) 申請者と処理者一致
         if employee_compare_id and processor_compare_id and employee_compare_id == processor_compare_id:
-            print("★ employee(employeeDisplayId/displayId) と processor(employeeDisplayId/displayId) が一致")
             add_error("申請者と処理者が同一の為、別の処理者を選択してください")
 
-        # 5-2) 転記日エラー
+        # 5-2) 転記日エラー（2か月前末日以前 / 2か月後月初以降）
         if final_posting_date:
             pd = parse_date_yyyy_mm_dd(final_posting_date)
             if pd:
@@ -565,126 +441,62 @@ async def casesubs(request: Request):
                 two_months_after = add_months(today, 2)
                 first_day_after = date(two_months_after.year, two_months_after.month, 1)
 
-                # 「二か月前の月末以前」
                 if pd <= last_day_before:
-                    print(
-                        f"★ 転記日エラー（過去側）pd={pd}, last_day_before={last_day_before}"
-                    )
-                    add_error(
-                        f"転記日が{two_months_before.year}年{two_months_before.month}月より以前の為、取引日付を再確認してください"
-                    )
-
-                # 「二か月後の月初以降」
+                    add_error(f"転記日が{two_months_before.year}年{two_months_before.month}月より以前の為、取引日付を再確認してください")
                 if pd >= first_day_after:
-                    print(
-                        f"★ 転記日エラー（未来側）pd={pd}, first_day_after={first_day_after}"
-                    )
-                    add_error(
-                        f"転記日が{two_months_after.year}年{two_months_after.month}月より以降の為、取引日付を再確認してください"
-                    )
+                    add_error(f"転記日が{two_months_after.year}年{two_months_after.month}月より以降の為、取引日付を再確認してください")
 
-        # 5-3) 支払基準日エラー (Teijitu = "2")
+        # 5-3) 基準日エラー（caseTypeに影響されずに判定する）
         if teijitu_flag == "2" and final_payment_date:
             pay_dt = parse_date_yyyy_mm_dd(final_payment_date)
-            pd = parse_date_yyyy_mm_dd(final_posting_date) if final_posting_date else None
+            post_dt = parse_date_yyyy_mm_dd(final_posting_date) if final_posting_date else None
 
             if pay_dt:
-                cond1 = pay_dt < today
-                cond2 = pd is not None and pay_dt < pd
-                if cond1:
-                    print(
-                        f"★ 支払基準日エラー（本日より過去）: pay_dt={pay_dt}, today={today}"
-                    )
-                    add_error(
-                        f"支払基準日が本日（{today.strftime('%Y-%m-%d')}）より過去の為、支払基準日を再確認してください"
-                    )
-                if cond2:
-                    print(
-                        f"★ 支払基準日エラー（転記日より前）: pay_dt={pay_dt}, posting_dt={pd}"
-                    )
-                    add_error(
-                        f"支払基準日が転記日（{final_posting_date}）より前の為、支払基準日を再確認してください"
-                    )
+                if pay_dt < today:
+                    add_error(f"基準日が本日（{today.strftime('%Y-%m-%d')}）より過去の為、基準日を再確認してください")
+                if post_dt and pay_dt < post_dt:
+                    add_error(f"基準日が転記日（{final_posting_date}）より前の為、基準日を再確認してください")
 
-        # 5-4) 処理者会社エラー (TBL_USER_COMPANY & TBL_ORG_COMPANY)
+        # 5-4) 処理者会社エラー
         proc_company_code = None
         org_company_code = None
 
-        if processor_compare_id and TBL_USER_COMPANY:
-            user_row = next(
-                (row for row in TBL_USER_COMPANY if row.get("USER_ID") == processor_compare_id),
-                None,
-            )
+        if processor_compare_id:
+            user_row = next((r for r in TBL_USER_COMPANY if r.get("USER_ID") == processor_compare_id), None)
             if user_row:
                 proc_company_code = user_row.get("COMPANY_CODE")
-                print(
-                    f"→ TBL_USER_COMPANY hit: USER_ID={processor_compare_id}, "
-                    f"COMPANY_CODE={proc_company_code}"
-                )
-            else:
-                print(f"→ TBL_USER_COMPANY no hit for USER_ID={processor_compare_id}")
 
         org_unit_key = zfill_8(service_team_disp_id_raw) if service_team_disp_id_raw else None
-        if org_unit_key and TBL_ORG_COMPANY:
-            org_row = next(
-                (row for row in TBL_ORG_COMPANY if row.get("ORG_UNIT") == org_unit_key),
-                None,
-            )
+        if org_unit_key:
+            org_row = next((r for r in TBL_ORG_COMPANY if r.get("ORG_UNIT") == org_unit_key), None)
             if org_row:
                 org_company_code = org_row.get("COMPANY_CODE")
-                print(
-                    f"→ TBL_ORG_COMPANY hit: ORG_UNIT={org_unit_key}, "
-                    f"COMPANY_CODE={org_company_code}"
-                )
-            else:
-                print(f"→ TBL_ORG_COMPANY no hit for ORG_UNIT={org_unit_key}")
-        elif service_team_disp_id_raw:
-            print(f"→ serviceTeam.displayId={service_team_disp_id_raw}, padded={org_unit_key}")
 
-        # 両方 COMPANY_CODE が取れていて、かつ不一致のときのみエラー
-        if (
-            proc_company_code not in (None, "")
-            and org_company_code not in (None, "")
-            and proc_company_code != org_company_code
-        ):
-            print(
-                f"★ 処理者会社エラー判定: proc_company_code={proc_company_code}, "
-                f"org_company_code={org_company_code}"
-            )
-            add_error(
-                "処理者の所属会社とサービス組織の会社が不一致の為、支払依頼及び処理者を再確認してください"
-            )
+        if proc_company_code and org_company_code and proc_company_code != org_company_code:
+            add_error("処理者(承認者)の所属会社とサービスチーム(組織ユニット)の会社が不一致の為、処理業務及び処理者を再確認してください")
 
-        # 5-5) 未入力チェック
-        # serviceTeam.displayId 未入力
-        service_team_disp = service_team.get("displayId")
-        if not service_team_disp:
-            add_error("サービスチーム表示ID 未入力")
+        # 5-5) 未入力チェック（supplier/accountはmodeで切替）
+        if not service_team.get("displayId"):
+            add_error("サービスチーム名(組織ユニット) 未入力")
 
-        # supplier.displayId 未入力
-        supplier_disp = supplier.get("displayId")
-        if not supplier_disp:
-            add_error("サプライヤ表示 ID 未入力")
+        if mode == "ZZY":
+            if not account_display_id:
+                add_error("アカウント名(得意先) 未入力")
+        else:
+            if not supplier_display_id:
+                add_error("サプライヤ名(仕入先) 未入力")
 
-        # processor.displayId 未入力
-        processor_disp_for_check = processor.get("displayId")
-        if not processor_disp_for_check:
-            add_error("処理担当者ビジネスパートナー ID 未入力")
+        if not processor_data.get("displayId"):
+            add_error("処理者名(承認者) 未入力")
 
-        # F_Payment_Date 未入力
-        payment_date_for_check = response_form.get("F_Payment_Date")
-        if not payment_date_for_check:
-            add_error("支払基準日 未入力")
+        if not response_form.get("F_Payment_Date"):
+            add_error("基準日 未入力")
 
         # --------------------------------------------------------
-        # 6) F_CaseErrorMsg / F_CaseErrorCheck / system_message
+        # 6) F_CaseErrorMsg / F_CaseErrorCheck / messages
         # --------------------------------------------------------
         if errors:
-            numbered_lines = []
-            for idx, msg in enumerate(errors, start=1):
-                mark = to_circled_number(idx)
-                numbered_lines.append(f"{mark} {msg}")
-            case_error_msg = "\n".join(numbered_lines)
+            case_error_msg = "\n".join([f"{to_circled_number(i)} {m}" for i, m in enumerate(errors, start=1)])
             case_error_check = False
         else:
             case_error_msg = "エラーなし"
@@ -693,34 +505,113 @@ async def casesubs(request: Request):
         response_form["F_CaseErrorMsg"] = case_error_msg
         response_form["F_CaseErrorCheck"] = case_error_check
 
-        # システムメッセージ（INFO / ERROR）
-        if case_error_check:
-            system_message = {
-                "code": "S000",
-                "message": f"{timestamp} ケースエラーなし",
-                "type": "INFO",
-            }
-        else:
-            system_message = {
-                "code": "E001",
-                "message": f"{timestamp} ケースエラーあり",
-                "type": "ERROR",
-            }
+        system_message = {
+            "code": "S000" if case_error_check else "E001",
+            "message": f"{timestamp} ケースエラーなし" if case_error_check else f"{timestamp} ケースエラーあり",
+            "type": "INFO" if case_error_check else "ERROR",
+        }
 
-        # --------------------------------------------------------
-        # レスポンス組み立て
-        # --------------------------------------------------------
         response_body = {
             "responseBody": {
-                "messages": [
-                    system_message
-                ],
-                "value": {
-                    "Form": response_form
-                },
+                "messages": [],
+                "value": {"Form": response_form},
                 "isSuccess": True,
             }
         }
+
+        # --------------------------------------------------------
+        # 6.5 Debug: 最新JSON 全項目の最終値ログ（1ログ・項目ごと改行）
+        # --------------------------------------------------------
+        user_data = rb.get("user") or {}
+        user_admin = user_data.get("adminData") or {}
+
+        case = case_data
+        category1 = case.get("categoryLevel1") or {}
+        ext = case.get("extensions") or {}
+
+        supplier_data = case.get("supplier") or {}
+        employee_data = case.get("employee") or {}
+        processor_data = case.get("processor") or {}
+        service_team_data = case.get("serviceTeam") or {}
+        account_data = case.get("account") or {}
+
+        debug_lines = [
+            "========== DEBUG START (after all logic) ==========",
+
+            # --- Form ---
+            f"Form.Logic_Check = {v(form_data.get('Logic_Check'))}",
+            f"Form.F_CaseErrorCheck = {v(form_data.get('F_CaseErrorCheck'))}",
+            f"Form.F_Currency = {v(form_data.get('F_Currency'))}",
+
+            # --- user.adminData ---
+            f"user.adminData.createdByName = {v(user_admin.get('createdByName'))}",
+            f"user.adminData.updatedBy = {v(user_admin.get('updatedBy'))}",
+            f"user.adminData.createdBy = {v(user_admin.get('createdBy'))}",
+            f"user.adminData.updatedByName = {v(user_admin.get('updatedByName'))}",
+
+            # --- case.categoryLevel1 ---
+            f"case.categoryLevel1.displayId = {v(category1.get('displayId'))}",
+
+            # --- case.extensions ---
+            f"case.extensions.Total_amount = {v(ext.get('Total_amount'))}",
+            f"case.extensions.Postingdate = {v(ext.get('Postingdate'))}",
+            f"case.extensions.PaymentDate = {v(ext.get('PaymentDate'))}",
+            f"case.extensions.Teijitu = {v(ext.get('Teijitu'))}",
+            f"case.extensions.Total_amount_oth = {v(ext.get('Total_amount_oth'))}",
+            f"case.extensions.Request_date = {v(ext.get('Request_date'))}",
+            f"case.extensions.CompanyCode = {v(ext.get('CompanyCode'))}",
+            f"case.extensions.paymentmethod = {v(ext.get('paymentmethod'))}",
+            f"case.extensions.TransactionDate = {v(ext.get('TransactionDate'))}",
+
+            # --- case.supplier ---
+            f"case.supplier.name = {v(supplier_data.get('name'))}",
+            f"case.supplier.defaultExternalSupplierId = {v(supplier_data.get('defaultExternalSupplierId'))}",
+            f"case.supplier.id = {v(supplier_data.get('id'))}",
+            f"case.supplier.displayId = {v(supplier_data.get('displayId'))}",
+            f"case.supplier.defaultExternalBusinessPartnerId = {v(supplier_data.get('defaultExternalBusinessPartnerId'))}",
+
+            # --- case.employee ---
+            f"case.employee.employeeDisplayId = {v(employee_data.get('employeeDisplayId'))}",
+            f"case.employee.name = {v(employee_data.get('name'))}",
+            f"case.employee.id = {v(employee_data.get('id'))}",
+            f"case.employee.displayId = {v(employee_data.get('displayId'))}",
+
+            # --- case.processor ---
+            f"case.processor.employeeDisplayId = {v(processor_data.get('employeeDisplayId'))}",
+            f"case.processor.name = {v(processor_data.get('name'))}",
+            f"case.processor.id = {v(processor_data.get('id'))}",
+            f"case.processor.displayId = {v(processor_data.get('displayId'))}",
+
+            # --- case.serviceTeam ---
+            f"case.serviceTeam.name = {v(service_team_data.get('name'))}",
+            f"case.serviceTeam.id = {v(service_team_data.get('id'))}",
+            f"case.serviceTeam.displayId = {v(service_team_data.get('displayId'))}",
+
+            # --- case.account ---
+            f"case.account.defaultExternalCustomerId = {v(account_data.get('defaultExternalCustomerId'))}",
+            f"case.account.name = {v(account_data.get('name'))}",
+            f"case.account.id = {v(account_data.get('id'))}",
+            f"case.account.displayId = {v(account_data.get('displayId'))}",
+            f"case.account.defaultExternalBusinessPartnerId = {v(account_data.get('defaultExternalBusinessPartnerId'))}",
+
+            # --- caseType ---
+            f"case.caseType = {v(case.get('caseType'))}",
+
+            # --- calculated / response ---
+            f"calc.final_posting_date = {v(final_posting_date)}",
+            f"calc.final_payment_date = {v(final_payment_date)}",
+            f"response.Form.F_Posting_Date = {v(response_form.get('F_Posting_Date'))}",
+            f"response.Form.F_Payment_Date = {v(response_form.get('F_Payment_Date'))}",
+            f"response.Form.F_Payment_Method = {v(response_form.get('F_Payment_Method'))}",
+            f"response.Form.F_Rate = {v(response_form.get('F_Rate'))}",
+            f"response.Form.F_Total_Amount_C = {v(response_form.get('F_Total_Amount_C'))}",
+            f"response.Form.F_Total_Amount_T = {v(response_form.get('F_Total_Amount_T'))}",
+            f"response.Form.F_CaseErrorMsg = {v(response_form.get('F_CaseErrorMsg'))}",
+            f"response.Form.F_CaseErrorCheck = {v(response_form.get('F_CaseErrorCheck'))}",
+
+            "========== DEBUG END ==========",
+        ]
+        print("\n".join(debug_lines))
 
         print("→ responseBody.value.Form:")
         print(json.dumps(response_form, ensure_ascii=False, indent=2))
@@ -730,10 +621,8 @@ async def casesubs(request: Request):
     except HTTPException as http_ex:
         raise http_ex
     except Exception as ex:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Internal Server Error: {str(ex)}"
-        )
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(ex)}")
 
 
 if __name__ == "__main__":
