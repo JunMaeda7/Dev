@@ -1,0 +1,88 @@
+{
+  "entity": "sap.ssc.caseservice.entity.case",
+  "currentImage": {
+    "subject": "test",
+    "priority": "03",
+    "priorityDescription": "標準",
+    "origin": "SELF_SERVICE",
+    "originDescription": "セルフサービス",
+    "caseType": "ZZXA",
+    "caseTypeDescription": "支払依頼_JTBC",
+    "status": "01",
+    "processor": {
+      "emailId": "w3_takeharu.endo@jt.com",
+      "employeeDisplayId": "USER003TEST",
+      "id": "0197e7eb-5ffa-777e-a2df-7ffdc4939a1c",
+      "displayId": "8000000122",
+      "name": "TEST USER003",
+      "isDeleted": false,
+      "isMain": false
+    },
+    "supplier": {
+      "country": "DE",
+      "state": "BY",
+      "postalCode": "89343",
+      "formattedPostalAddress": "Messerschmittstraße 211 / 89343 Jettingen-Scheppach / DE",
+      "defaultExternalBusinessPartnerId": "7700003",
+      "id": "019ab352-c4da-7225-88b3-31436a4aa02f",
+      "displayId": "1000030",
+      "name": "Test Supplier 01",
+      "isDeleted": false,
+      "isMain": false
+    },
+    "employee": {
+      "emailId": "baigei.on@jt.com",
+      "employeeDisplayId": "U_QUB0010",
+      "id": "019715d4-87dd-7ddb-b7ca-403fe5ca4c7e",
+      "displayId": "8000000083",
+      "name": "Baigei On",
+      "isDeleted": false,
+      "isMain": false
+    },
+    "timePoints": {
+      "reportedOn": "2025-11-26T05:56:41.846Z"
+    },
+    "categoryLevel1": {},
+    "categoryLevel2": {},
+    "categoryLevel3": {},
+    "categoryLevel4": {},
+    "company": {
+      "id": "11f013ac-8ef2-4a6e-afdb-815d1b020a00",
+      "displayId": "S353",
+      "name": "Company Code S353"
+    },
+    "isDraftMode": false,
+    "extensions": {
+      "CompanyCode": null,
+      "TransactionDate": "2025-11-01",
+      "Postingdate": "2025-11-15",
+      "paymentmethod": "E",
+      "Teijitu": "1",
+      "PaymentDate": null,
+      "Additional_applicant": null,
+      "currency": "USD",
+      "Rate": 100,
+      "Total_amount": 2345600,
+      "Total_amount_oth": 23456,
+      "Electronic_evidence": "1",
+      "Provisional_evidence": "1"
+    },
+    "adminData": {
+      "createdOn": "2025-11-26T06:01:52.994518316Z",
+      "createdBy": "08806d61-3b97-11f0-9f4c-6bd0a8aedffe",
+      "createdByName": "Baigei On",
+      "updatedOn": "2025-11-26T06:01:52.994518316Z",
+      "updatedBy": "08806d61-3b97-11f0-9f4c-6bd0a8aedffe",
+      "updatedByName": "Baigei On"
+    }
+  },
+  "beforeImage": {},
+  "skipValidations": true,
+  "context": {
+    "employeeId": "019715d4-87dd-7ddb-b7ca-403fe5ca4c7e",
+    "userId": "08806d61-3b97-11f0-9f4c-6bd0a8aedffe",
+    "skipValidations": true,
+    "isDryRun": true,
+    "language": "ja"
+  }
+}

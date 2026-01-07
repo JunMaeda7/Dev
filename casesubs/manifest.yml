@@ -1,0 +1,15 @@
+---
+applications:
+  - name: casesubs
+    stack: cflinuxfs4
+    memory: 512MB
+    disk_quota: 1GB
+    host: casesubs
+    domain: cf.ap21.hana.ondemand.com
+    buildpacks: ["python_buildpack"]
+    command: uvicorn app:app --host=0.0.0.0 --port=${PORT}
+    env:
+        HANA_ADDRESS: 6476e830-defb-4b04-871c-7c375442b10a.hana.prod-ap21.hanacloud.ondemand.com
+        HANA_PORT: "443"
+        HANA_USER: DBADMIN
+        HANA_PASSWORD: 11223344556677889900Aeee

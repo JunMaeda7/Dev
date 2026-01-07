@@ -5,12 +5,13 @@ import uvicorn
 import os
 import httpx
 import asyncio
+import re
+import json
 from fastapi import FastAPI, Query
 from typing import List, Optional
 from pydantic import BaseModel
 from hdbcli import dbapi
-import json
-from datetime import datetime, timedelta
+from datetime import datetime, date
 
 description= "摘要マスタと勘定科目の表示"
 app = FastAPI(
